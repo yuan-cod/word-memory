@@ -1,0 +1,5059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="单词记忆">
+    <link rel="manifest" href="./manifest.json">
+    <title>考研单词记忆</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f3ef;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #2c2c2c;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 25px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid #e8e5e0;
+        }
+
+        .header h1 {
+            font-size: 1.4rem;
+            color: #1a1a1a;
+            font-weight: 700;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chapter-select {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: 1px solid #d5d0c8;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            color: #2c2c2c;
+            transition: all 0.2s;
+        }
+
+        .chapter-select:hover {
+            border-color: #8a8578;
+        }
+
+        .chapter-select:focus {
+            outline: none;
+            border-color: #6b6560;
+            box-shadow: 0 0 0 2px rgba(107,101,96,0.15);
+        }
+
+        .reset-btn {
+            padding: 10px 20px;
+            background: #8b4d4d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #7a4242;
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 12px 20px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid #e8e5e0;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px 10px 38px;
+            border: 1px solid #d5d0c8;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: #faf9f7;
+            transition: all 0.2s;
+            color: #2c2c2c;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #6b6560;
+            box-shadow: 0 0 0 2px rgba(107,101,96,0.15);
+            background: white;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9a9590;
+            font-size: 1rem;
+        }
+
+        .toolbar-btn {
+            padding: 10px 16px;
+            border: 1px solid #d5d0c8;
+            border-radius: 8px;
+            background: white;
+            color: #4a4540;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-btn:hover {
+            border-color: #8a8578;
+            color: #2c2c2c;
+            background: #faf9f7;
+        }
+
+        .toolbar-btn.active {
+            background: #4a4540;
+            color: white;
+            border-color: transparent;
+        }
+
+        .toolbar-btn .badge {
+            background: #8b4d4d;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .toolbar-btn.active .badge {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* 拼写测试模式 */
+        .spelling-mode {
+            display: none;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 25px;
+        }
+
+        .spelling-mode.active {
+            display: block;
+        }
+
+        .spelling-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid #e8e5e0;
+            text-align: center;
+        }
+
+        .spelling-hint {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+        }
+
+        .spelling-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px 20px;
+            border: 2px solid #d5d0c8;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            text-align: center;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            color: #2c2c2c;
+        }
+
+        .spelling-input:focus {
+            outline: none;
+            border-color: #6b6560;
+            box-shadow: 0 0 0 3px rgba(107,101,96,0.15);
+        }
+
+        .spelling-input.correct {
+            border-color: #5a7a5a;
+            box-shadow: 0 0 0 3px rgba(90,122,90,0.15);
+        }
+
+        .spelling-input.wrong {
+            border-color: #8b4d4d;
+            box-shadow: 0 0 0 3px rgba(139,77,77,0.15);
+        }
+
+        .spelling-feedback {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            min-height: 30px;
+        }
+
+        .spelling-feedback.correct {
+            color: #5a7a5a;
+        }
+
+        .spelling-feedback.wrong {
+            color: #8b4d4d;
+        }
+
+        .spelling-answer {
+            font-size: 1.3rem;
+            color: #6b6560;
+            margin-bottom: 20px;
+        }
+
+        .spelling-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .spelling-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .spelling-btn.primary {
+            background: #4a4540;
+            color: white;
+        }
+
+        .spelling-btn.primary:hover {
+            background: #3a3530;
+        }
+
+        .spelling-btn.secondary {
+            background: #e8e5e0;
+            color: #4a4540;
+        }
+
+        .spelling-btn.secondary:hover {
+            background: #d5d0c8;
+        }
+
+        /* 艾宾浩斯复习模式 */
+        .ebbinghaus-mode {
+            display: none;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 25px;
+        }
+
+        .ebbinghaus-mode.active {
+            display: block;
+        }
+
+        .ebbinghaus-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid #e8e5e0;
+        }
+
+        .ebbinghaus-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .ebbinghaus-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .ebbinghaus-stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        .ebbinghaus-stat {
+            padding: 8px 14px;
+            background: #faf9f7;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #4a4540;
+            border: 1px solid #e8e5e0;
+        }
+
+        .ebbinghaus-stat span {
+            font-weight: 700;
+            color: #4a4540;
+        }
+
+        .ebbinghaus-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .ebbinghaus-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0ede8;
+            transition: background 0.2s;
+        }
+
+        .ebbinghaus-item:hover {
+            background: #faf9f7;
+        }
+
+        .ebbinghaus-word {
+            font-weight: 600;
+            color: #2c2c2c;
+        }
+
+        .ebbinghaus-meaning {
+            color: #6b6560;
+            margin-left: 15px;
+        }
+
+        .ebbinghaus-time {
+            font-size: 0.85rem;
+            color: #8a8578;
+            padding: 4px 8px;
+            background: #f0ede8;
+            border-radius: 6px;
+        }
+
+        .ebbinghaus-time.urgent {
+            background: #f0dede;
+            color: #8b4d4d;
+        }
+
+        .ebbinghaus-time.soon {
+            background: #f0ead6;
+            color: #7a6b3a;
+        }
+
+        .ebbinghaus-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .ebbinghaus-empty {
+            text-align: center;
+            padding: 40px;
+            color: #9a9590;
+        }
+
+        /* 熟练度筛选 */
+        .filter-bar {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #d5d0c8;
+            border-radius: 20px;
+            background: #ffffff;
+            color: #4a4540;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #faf9f7;
+            border-color: #8a8578;
+        }
+
+        .filter-btn.active {
+            background: #4a4540;
+            color: white;
+            border-color: transparent;
+        }
+
+        .filter-btn .filter-count {
+            display: inline-block;
+            min-width: 20px;
+            padding: 2px 6px;
+            background: rgba(0,0,0,0.08);
+            border-radius: 10px;
+            margin-left: 6px;
+            font-size: 0.8rem;
+        }
+
+        .filter-btn.active .filter-count {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* 统计面板 */
+        .stats-panel {
+            width: 100%;
+            max-width: 1000px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid #e8e5e0;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #2c2c2c;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #8a8578;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+
+        /* 进度条 */
+        .progress-container {
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 25px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e8e5e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #6b6560;
+            border-radius: 8px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #6b6560;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* 卡片容器 */
+        .card-container {
+            width: 100%;
+            max-width: 1000px;
+            perspective: 1500px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.no-transition {
+            transition: none !important;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e8e5e0;
+        }
+
+        .card-front {
+            background: #ffffff;
+        }
+
+        .card-back {
+            background: #3a3530;
+            transform: rotateY(180deg);
+        }
+
+        .word-display {
+            font-size: 4.5rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+
+        .mastery-indicator {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .mastery-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e8e5e0;
+            transition: all 0.3s;
+        }
+
+        .mastery-dot.filled {
+            background: #5a7a5a;
+        }
+
+        .hint-text {
+            color: #9a9590;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .definition-display {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #f5f3ef;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .review-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.15);
+            color: #f5f3ef;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* 操作按钮 */
+        .action-buttons {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+
+        .action-btn {
+            flex: 1;
+            max-width: 200px;
+            padding: 18px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .know-btn {
+            background: #5a7a5a;
+            color: white;
+        }
+
+        .know-btn:hover {
+            background: #4d6b4d;
+        }
+
+        .dont-know-btn {
+            background: #8b4d4d;
+            color: white;
+        }
+
+        .dont-know-btn:hover {
+            background: #7a4242;
+        }
+
+        /* 快捷键提示 */
+        .shortcuts-hint {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 15px 25px;
+            display: flex;
+            gap: 30px;
+            border: 1px solid #e8e5e0;
+        }
+
+        .shortcut-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6b6560;
+            font-size: 0.9rem;
+        }
+
+        .key {
+            background: #f0ede8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #4a4540;
+            border: 1px solid #d5d0c8;
+        }
+
+        /* 完成界面 */
+        .finished-screen {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e8e5e0;
+        }
+
+        .finished-screen.show {
+            display: block;
+        }
+
+        .finished-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+
+        .finished-title {
+            font-size: 2.5rem;
+            color: #1a1a1a;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .finished-subtitle {
+            font-size: 1.2rem;
+            color: #6b6560;
+            margin-bottom: 30px;
+        }
+
+        .finished-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .finished-stat {
+            background: #faf9f7;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e8e5e0;
+        }
+
+        .finished-stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #2c2c2c;
+        }
+
+        .finished-stat-label {
+            font-size: 0.85rem;
+            color: #8a8578;
+            margin-top: 5px;
+        }
+
+        .restart-btn {
+            padding: 15px 40px;
+            background: #4a4540;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .restart-btn:hover {
+            background: #3a3530;
+        }
+
+        /* ========== 每日进度追踪日志 ========== */
+        .daily-log-panel {
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid #e8e5e0;
+            overflow: hidden;
+        }
+
+        .daily-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background: #faf9f7;
+            border-bottom: 1px solid #e8e5e0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .daily-log-header:hover {
+            background: #f5f3ef;
+        }
+
+        .daily-log-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #2c2c2c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .daily-log-toggle {
+            font-size: 0.85rem;
+            color: #8a8578;
+            transition: transform 0.2s;
+        }
+
+        .daily-log-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .daily-log-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .daily-log-content.show {
+            display: block;
+        }
+
+        .log-date-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .log-date-btn {
+            padding: 6px 12px;
+            border: 1px solid #d5d0c8;
+            border-radius: 6px;
+            background: white;
+            color: #4a4540;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .log-date-btn:hover {
+            background: #faf9f7;
+            border-color: #8a8578;
+        }
+
+        .log-date-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2c2c2c;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .log-entries {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #faf9f7;
+            border-radius: 8px;
+            border: 1px solid #e8e5e0;
+        }
+
+        .log-entry-checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #d5d0c8;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .log-entry-checkbox:hover {
+            border-color: #8a8578;
+        }
+
+        .log-entry-checkbox.checked {
+            background: #5a7a5a;
+            border-color: #5a7a5a;
+            color: white;
+        }
+
+        .log-entry-checkbox.exceeded {
+            background: #4a6a8a;
+            border-color: #4a6a8a;
+            color: white;
+        }
+
+        .log-entry-checkbox.incomplete {
+            background: #8b4d4d;
+            border-color: #8b4d4d;
+            color: white;
+        }
+
+        .log-entry-text {
+            flex: 1;
+            font-size: 0.95rem;
+            color: #2c2c2c;
+        }
+
+        .log-entry-status {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .log-entry-status.done {
+            background: #e8f0e8;
+            color: #5a7a5a;
+        }
+
+        .log-entry-status.exceeded {
+            background: #e0eaf0;
+            color: #4a6a8a;
+        }
+
+        .log-entry-status.missed {
+            background: #f0e0e0;
+            color: #8b4d4d;
+        }
+
+        .log-entry-status.pending {
+            background: #f0ede8;
+            color: #8a8578;
+        }
+
+        .log-summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: #faf9f7;
+            border-radius: 8px;
+            border: 1px solid #e8e5e0;
+            text-align: center;
+        }
+
+        .log-summary-text {
+            font-size: 0.95rem;
+            color: #6b6560;
+        }
+
+        .log-summary-text strong {
+            color: #2c2c2c;
+        }
+
+        .log-add-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            border: 1px dashed #d5d0c8;
+            border-radius: 8px;
+            background: transparent;
+            color: #8a8578;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .log-add-btn:hover {
+            border-color: #8a8578;
+            color: #4a4540;
+            background: #faf9f7;
+        }
+
+        /* 启动提醒弹窗 */
+        .reminder-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .reminder-overlay.show {
+            display: flex;
+        }
+
+        .reminder-box {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 35px 40px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border: 1px solid #e8e5e0;
+            text-align: center;
+        }
+
+        .reminder-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .reminder-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #2c2c2c;
+            margin-bottom: 12px;
+        }
+
+        .reminder-message {
+            font-size: 1rem;
+            color: #6b6560;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .reminder-btn {
+            padding: 12px 30px;
+            background: #4a4540;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reminder-btn:hover {
+            background: #3a3530;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .stats-panel {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .word-display {
+                font-size: 3rem;
+            }
+
+            .definition-display {
+                font-size: 1.8rem;
+            }
+
+            .card {
+                height: 320px;
+            }
+
+            .shortcuts-hint {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .finished-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <h1>考研单词记忆</h1>
+        <div class="header-controls">
+            <select class="chapter-select" id="chapterSelect">
+                <option value="1">第1章</option>
+<option value="2">第2章</option>
+<option value="3">第3章</option>
+<option value="4">第4章</option>
+<option value="5">第5章</option>
+<option value="6">第6章</option>
+<option value="7">第7章</option>
+<option value="8">第8章</option>
+<option value="9">第9章</option>
+<option value="10">第10章</option>
+<option value="11">第11章</option>
+<option value="12">第12章</option>
+<option value="13">第13章</option>
+<option value="14">第14章</option>
+<option value="15">第15章</option>
+<option value="16">第16章</option>
+<option value="17">第17章</option>
+<option value="18">第18章</option>
+<option value="19">第19章</option>
+<option value="20">第20章</option>
+<option value="21">第21章</option>
+<option value="22">第22章</option>
+<option value="23">第23章</option>
+<option value="24">第24章</option>
+<option value="25">第25章</option>
+<option value="26">第26章</option>
+<option value="27">第27章</option>
+<option value="28">第28章</option>
+<option value="29">第29章</option>
+<option value="30">第30章</option>
+<option value="31">第31章</option>
+<option value="32">第32章</option>
+<option value="33">第33章</option>
+<option value="34">第34章</option>
+<option value="35">第35章</option>
+<option value="36">第36章</option>
+<option value="37">第37章</option>
+<option value="38">第38章</option>
+<option value="39">第39章</option>
+<option value="40">第40章</option>
+            </select>
+            <button class="reset-btn" onclick="resetChapter()">重置进度</button>
+        </div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <div class="search-box">
+                <span class="search-icon">&#128269;</span>
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索单词或释义...">
+            </div>
+        </div>
+        <div class="toolbar-right">
+            <button class="toolbar-btn" id="wordbookBtn" onclick="toggleWordbook()">
+                &#128278; 生词本 <span class="badge" id="wordbookCount">0</span>
+            </button>
+            <button class="toolbar-btn" id="mistakesBtn" onclick="toggleMistakes()">
+                &#10060; 错题本 <span class="badge" id="mistakesCount">0</span>
+            </button>
+            <button class="toolbar-btn" id="spellingBtn" onclick="toggleSpellingMode()">
+                &#9997; 拼写测试
+            </button>
+            <button class="toolbar-btn" id="ebbinghausBtn" onclick="toggleEbbinghausMode()">
+                &#128197; 复习计划
+            </button>
+            <button class="toolbar-btn" onclick="exportData()">
+                &#128228; 导出
+            </button>
+            <button class="toolbar-btn" onclick="importData()">
+                &#128229; 导入
+            </button>
+        </div>
+    </div>
+
+    <!-- 每日进度追踪日志 -->
+    <div class="daily-log-panel" id="dailyLogPanel">
+        <div class="daily-log-header" onclick="toggleDailyLog()">
+            <div class="daily-log-title">
+                <span>&#128203;</span> 每日进度日志
+                <span id="logTodayStatus" style="font-size:0.85rem;font-weight:400;color:#8a8578;margin-left:8px;"></span>
+            </div>
+            <span class="daily-log-toggle" id="logToggle">&#9660;</span>
+        </div>
+        <div class="daily-log-content" id="logContent">
+            <div class="log-date-nav">
+                <button class="log-date-btn" onclick="changeLogDate(-1)">&#9664; 前一天</button>
+                <span class="log-date-display" id="logDateDisplay"></span>
+                <button class="log-date-btn" onclick="changeLogDate(1)">后一天 &#9654;</button>
+            </div>
+            <div class="log-entries" id="logEntries">
+                <!-- 动态生成 -->
+            </div>
+            <button class="log-add-btn" onclick="addLogEntry()">+ 添加学习计划</button>
+            <div class="log-summary" id="logSummary"></div>
+        </div>
+    </div>
+
+    <!-- 启动提醒弹窗 -->
+    <div class="reminder-overlay" id="reminderOverlay">
+        <div class="reminder-box">
+            <div class="reminder-icon" id="reminderIcon"></div>
+            <div class="reminder-title" id="reminderTitle"></div>
+            <div class="reminder-message" id="reminderMessage"></div>
+            <button class="reminder-btn" onclick="closeReminder()">知道了</button>
+        </div>
+    </div>
+
+    <!-- 熟练度筛选 -->
+    <div class="filter-bar" id="filterBar">
+        <button class="filter-btn active" data-filter="all" onclick="filterByMastery('all')">
+            全部 <span class="filter-count" id="filterAll">0</span>
+        </button>
+        <button class="filter-btn" data-filter="0" onclick="filterByMastery('0')">
+            未学习 <span class="filter-count" id="filter0">0</span>
+        </button>
+        <button class="filter-btn" data-filter="1" onclick="filterByMastery('1')">
+            初学 <span class="filter-count" id="filter1">0</span>
+        </button>
+        <button class="filter-btn" data-filter="2" onclick="filterByMastery('2')">
+            记忆中 <span class="filter-count" id="filter2">0</span>
+        </button>
+        <button class="filter-btn" data-filter="3" onclick="filterByMastery('3')">
+            已掌握 <span class="filter-count" id="filter3">0</span>
+        </button>
+    </div>
+
+    <!-- 拼写测试模式 -->
+    <div class="spelling-mode" id="spellingMode">
+        <div class="spelling-card">
+            <div class="spelling-hint" id="spellingHint">请根据释义拼写单词</div>
+            <input type="text" class="spelling-input" id="spellingInput" placeholder="输入英文单词..." autocomplete="off" autocapitalize="off" spellcheck="false">
+            <div class="spelling-feedback" id="spellingFeedback"></div>
+            <div class="spelling-answer" id="spellingAnswer"></div>
+            <div class="spelling-actions">
+                <button class="spelling-btn primary" id="spellingSubmit" onclick="checkSpelling()">确认</button>
+                <button class="spelling-btn secondary" id="spellingSkip" onclick="skipSpelling()">跳过</button>
+                <button class="spelling-btn secondary" onclick="exitSpellingMode()">退出拼写</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 艾宾浩斯复习模式 -->
+    <div class="ebbinghaus-mode" id="ebbinghausMode">
+        <div class="ebbinghaus-card">
+            <div class="ebbinghaus-header">
+                <div class="ebbinghaus-title">艾宾浩斯复习计划</div>
+                <div class="ebbinghaus-stats">
+                    <div class="ebbinghaus-stat">待复习: <span id="ebbinghausPending">0</span></div>
+                    <div class="ebbinghaus-stat">已完成: <span id="ebbinghausCompleted">0</span></div>
+                </div>
+            </div>
+            <div class="ebbinghaus-list" id="ebbinghausList">
+                <div class="ebbinghaus-empty">加载中...</div>
+            </div>
+            <div class="ebbinghaus-actions">
+                <button class="spelling-btn primary" onclick="startEbbinghausReview()">开始复习</button>
+                <button class="spelling-btn secondary" onclick="exitEbbinghausMode()">退出</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计面板 -->
+    <div class="stats-panel">
+        <div class="stat-card">
+            <div class="stat-value" id="totalCount">0</div>
+            <div class="stat-label">本章总数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="learnedCount">0</div>
+            <div class="stat-label">已掌握</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="learningCount">0</div>
+            <div class="stat-label">学习中</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="accuracy">0%</div>
+            <div class="stat-label">正确率</div>
+        </div>
+    </div>
+
+    <!-- 进度条 -->
+    <div class="progress-container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">0 / 0</div>
+    </div>
+
+    <!-- 单词卡片 -->
+    <div class="card-container" id="cardContainer">
+        <div class="card" id="card" onclick="flipCard()">
+            <div class="card-face card-front">
+                <div class="mastery-indicator" id="masteryIndicator">
+                    <div class="mastery-dot"></div>
+                    <div class="mastery-dot"></div>
+                    <div class="mastery-dot"></div>
+                </div>
+                <div class="word-display" id="wordDisplay">Loading...</div>
+            </div>
+            <div class="card-face card-back">
+                <div class="review-badge" id="reviewBadge">新词</div>
+                <div class="definition-display" id="definitionDisplay"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-buttons" id="actionButtons">
+        <button class="action-btn dont-know-btn" onclick="markAsUnknown()">
+            <span>❌</span>
+            <span>不认识</span>
+        </button>
+        <button class="action-btn know-btn" onclick="markAsKnown()">
+            <span>✅</span>
+            <span>认识</span>
+        </button>
+    </div>
+
+    <!-- 完成界面 -->
+    <div class="finished-screen" id="finishedScreen">
+        <div class="finished-icon">🎉</div>
+        <div class="finished-title">太棒了！</div>
+        <div class="finished-subtitle">本章单词已全部掌握</div>
+        <div class="finished-stats">
+            <div class="finished-stat">
+                <div class="finished-stat-value" id="finishedTotal">0</div>
+                <div class="finished-stat-label">总单词数</div>
+            </div>
+            <div class="finished-stat">
+                <div class="finished-stat-value" id="finishedAccuracy">0%</div>
+                <div class="finished-stat-label">正确率</div>
+            </div>
+            <div class="finished-stat">
+                <div class="finished-stat-value" id="finishedReview">0</div>
+                <div class="finished-stat-label">复习次数</div>
+            </div>
+        </div>
+        <button class="restart-btn" onclick="resetChapter()">再来一遍</button>
+    </div>
+
+<script>
+// ========== API 桥接层 ==========
+// 动态检测 PyWebView API（因为 API 是页面加载后才注入的）
+function getApi() {
+    return window.pywebview?.api;
+}
+
+function isPyWebView() {
+    return !!getApi();
+}
+
+// 等待 PyWebView API 就绪（最多等待 timeout 毫秒）
+async function waitForApi(timeout = 3000) {
+    const start = Date.now();
+    while (!isPyWebView() && Date.now() - start < timeout) {
+        await new Promise(r => setTimeout(r, 100));
+    }
+    return isPyWebView();
+}
+
+// API 调用封装
+const API = {
+    // 生词本
+    async getWordbook() {
+        if (isPyWebView()) {
+            const result = await getApi().get_wordbook();
+            return result;
+        }
+        return JSON.parse(localStorage.getItem('wordMemory_wordbook') || '[]');
+    },
+
+    async saveWordbook(wordbookData) {
+        if (isPyWebView()) {
+            // PyWebView 环境下保存整个生词本
+            await getApi().save_wordbook_json(JSON.stringify(wordbookData));
+            return;
+        }
+        localStorage.setItem('wordMemory_wordbook', JSON.stringify(wordbookData));
+    },
+
+    async addToWordbook(word) {
+        if (isPyWebView()) {
+            return await getApi().add_to_wordbook(JSON.stringify(word));
+        }
+        const wordbook = JSON.parse(localStorage.getItem('wordMemory_wordbook') || '[]');
+        if (!wordbook.find(w => w.en === word.en)) {
+            wordbook.push({...word, addedAt: Date.now()});
+            localStorage.setItem('wordMemory_wordbook', JSON.stringify(wordbook));
+        }
+        return JSON.stringify({success: true, count: wordbook.length});
+    },
+
+    async removeFromWordbook(wordEn) {
+        if (isPyWebView()) {
+            return await getApi().remove_from_wordbook(wordEn);
+        }
+        let wordbook = JSON.parse(localStorage.getItem('wordMemory_wordbook') || '[]');
+        wordbook = wordbook.filter(w => w.en !== wordEn);
+        localStorage.setItem('wordMemory_wordbook', JSON.stringify(wordbook));
+        return JSON.stringify({success: true, count: wordbook.length});
+    },
+
+    // 错题本
+    async getMistakes() {
+        if (isPyWebView()) {
+            return await getApi().get_mistakes();
+        }
+        return JSON.parse(localStorage.getItem('wordMemory_mistakes') || '[]');
+    },
+
+    async saveMistakes(mistakesData) {
+        if (isPyWebView()) {
+            await getApi().save_mistakes_json(JSON.stringify(mistakesData));
+            return;
+        }
+        localStorage.setItem('wordMemory_mistakes', JSON.stringify(mistakesData));
+    },
+
+    async addToMistakes(word) {
+        if (isPyWebView()) {
+            return await getApi().add_to_mistakes(JSON.stringify(word));
+        }
+        const mistakes = JSON.parse(localStorage.getItem('wordMemory_mistakes') || '[]');
+        const existing = mistakes.find(w => w.en === word.en);
+        if (existing) {
+            existing.count = (existing.count || 1) + 1;
+            existing.lastWrongAt = Date.now();
+        } else {
+            mistakes.push({...word, count: 1, lastWrongAt: Date.now()});
+        }
+        localStorage.setItem('wordMemory_mistakes', JSON.stringify(mistakes));
+        return JSON.stringify({success: true, count: mistakes.length});
+    },
+
+    async removeFromMistakes(wordEn) {
+        if (isPyWebView()) {
+            return await getApi().remove_from_mistakes(wordEn);
+        }
+        let mistakes = JSON.parse(localStorage.getItem('wordMemory_mistakes') || '[]');
+        mistakes = mistakes.filter(w => w.en !== wordEn);
+        localStorage.setItem('wordMemory_mistakes', JSON.stringify(mistakes));
+        return JSON.stringify({success: true, count: mistakes.length});
+    },
+
+    // 学习进度
+    async getProgress(chapter) {
+        if (isPyWebView()) {
+            return await getApi().get_progress(chapter);
+        }
+        const key = `wordMemory_progress_${chapter}`;
+        return JSON.parse(localStorage.getItem(key) || '{}');
+    },
+
+    async saveProgress(chapter, data) {
+        if (isPyWebView()) {
+            return await getApi().save_progress(chapter, JSON.stringify(data));
+        }
+        const key = `wordMemory_progress_${chapter}`;
+        localStorage.setItem(key, JSON.stringify(data));
+        return JSON.stringify({success: true});
+    },
+
+    // 艾宾浩斯
+    async getEbbinghaus() {
+        if (isPyWebView()) {
+            return await getApi().get_ebbinghaus();
+        }
+        return JSON.parse(localStorage.getItem('wordMemory_ebbinghaus') || '{}');
+    },
+
+    async updateEbbinghaus(wordEn, isCorrect) {
+        if (isPyWebView()) {
+            return await getApi().update_ebbinghaus(wordEn, isCorrect);
+        }
+        const data = JSON.parse(localStorage.getItem('wordMemory_ebbinghaus') || '{}');
+        const now = Date.now();
+        const intervals = [
+            20 * 60 * 1000,
+            1 * 60 * 60 * 1000,
+            9 * 60 * 60 * 1000,
+            1 * 24 * 60 * 60 * 1000,
+            2 * 24 * 60 * 60 * 1000,
+            6 * 24 * 60 * 60 * 1000,
+            31 * 24 * 60 * 60 * 1000
+        ];
+
+        if (!data[wordEn]) {
+            data[wordEn] = {stage: 0, nextReview: now + intervals[0], lastReview: now};
+        }
+        const record = data[wordEn];
+        record.stage = isCorrect ? Math.min(record.stage + 1, intervals.length - 1) : 0;
+        record.nextReview = now + intervals[record.stage];
+        record.lastReview = now;
+        data[wordEn] = record;
+        localStorage.setItem('wordMemory_ebbinghaus', JSON.stringify(data));
+        return JSON.stringify({success: true, record});
+    },
+
+    // 导出导入
+    async exportData() {
+        if (isPyWebView()) {
+            return await getApi().export_all_data();
+        }
+        return JSON.stringify({
+            version: '1.0',
+            exportDate: Date.now(),
+            wordbook: JSON.parse(localStorage.getItem('wordMemory_wordbook') || '[]'),
+            mistakes: JSON.parse(localStorage.getItem('wordMemory_mistakes') || '[]'),
+            ebbinghaus: JSON.parse(localStorage.getItem('wordMemory_ebbinghaus') || '{}')
+        });
+    },
+
+    async importData(dataJson) {
+        if (isPyWebView()) {
+            return await getApi().import_data(dataJson);
+        }
+        try {
+            const data = JSON.parse(dataJson);
+            if (data.wordbook) localStorage.setItem('wordMemory_wordbook', JSON.stringify(data.wordbook));
+            if (data.mistakes) localStorage.setItem('wordMemory_mistakes', JSON.stringify(data.mistakes));
+            if (data.ebbinghaus) localStorage.setItem('wordMemory_ebbinghaus', JSON.stringify(data.ebbinghaus));
+            return JSON.stringify({success: true, message: '导入成功'});
+        } catch(e) {
+            return JSON.stringify({success: false, message: '导入失败: ' + e.message});
+        }
+    }
+};
+
+// 单词数据
+const allLessons = {
+        1: [
+            { en: "ambition", zh: "野心;雄心;抱负" },
+            { en: "action", zh: "行动;行为;作用" },
+            { en: "activate", zh: "激活;使活动;启动" },
+            { en: "active", zh: "积极的;活跃的" },
+            { en: "react", zh: "反应;作出回应" },
+            { en: "exact", zh: "精确的;准确的" },
+            { en: "actual", zh: "实际的;真实的" },
+            { en: "interact", zh: "互动;相互作用" },
+            { en: "behave", zh: "表现;举止;行为" },
+            { en: "conduct", zh: "行为;引导;实施" },
+            { en: "semiconductor", zh: "半导体" },
+            { en: "direct", zh: "直接的;指导;指挥" },
+            { en: "implement", zh: "实施;执行;工具" },
+            { en: "antique", zh: "古董;古老的;古旧的" },
+            { en: "anticipate", zh: "预期;预料;提前使用" },
+            { en: "participate", zh: "参与;参加;分享" },
+            { en: "ancient", zh: "古代的;古老的" },
+            { en: "stale", zh: "不新鲜的;陈腐的;厌倦的" },
+            { en: "refresh", zh: "更新;使恢复;提神" },
+            { en: "flesh", zh: "肉;肉体;果肉" },
+            { en: "renew", zh: "更新;恢复;续期" },
+            { en: "restore", zh: "恢复;修复;归还" },
+            { en: "storage", zh: "存储;仓库;储藏" },
+            { en: "renovate", zh: "翻新;修复;革新" },
+            { en: "innovate", zh: "创新;改革;革新" },
+            { en: "recur", zh: "复发;重现;循环" },
+            { en: "incur", zh: "招致;引发;遭受" },
+            { en: "curb", zh: "控制;约束;路边" },
+            { en: "steer", zh: "驾驶;引导;掌舵" },
+            { en: "harness", zh: "利用;控制;马具" },
+            { en: "dominate", zh: "支配;主导;占优势" },
+            { en: "predominant", zh: "主要的;占优势的;卓越的" },
+            { en: "domestic", zh: "国内的;家庭的;驯养的" },
+            { en: "reign", zh: "统治;支配;时期" },
+            { en: "sovereign", zh: "主权的;君主;至高无上的" },
+            { en: "monarch", zh: "君主;帝王;最高统治者" },
+            { en: "award", zh: "奖励;奖品;授予" },
+            { en: "reward", zh: "回报;奖赏;报酬" },
+            { en: "awkward", zh: "尴尬的;笨拙的;棘手的" }
+        ],
+        2: [
+            { en: "embarrass", zh: "使尴尬;使窘迫;妨碍" },
+            { en: "embassy", zh: "大使馆;使馆人员" },
+            { en: "barren", zh: "贫瘠的;不育的;无益的" },
+            { en: "bare", zh: "赤裸的;空的;仅仅的" },
+            { en: "bargain", zh: "交易;便宜货;议价" },
+            { en: "margin", zh: "边缘;利润;页边空白" },
+            { en: "frontier", zh: "边境;前沿;边界" },
+            { en: "boundary", zh: "边界;界限;分界线" },
+            { en: "border", zh: "边界;边境;接壤" },
+            { en: "rise", zh: "上升;升起;增长" },
+            { en: "arise", zh: "出现;产生;起身" },
+            { en: "arouse", zh: "唤醒;激起;引起" },
+            { en: "raise", zh: "提高;举起;养育" },
+            { en: "praise", zh: "表扬;赞扬;称赞" },
+            { en: "prize", zh: "奖品;珍视;奖赏" },
+            { en: "enterprise", zh: "企业;事业;进取心" },
+            { en: "applaud", zh: "鼓掌;称赞;喝彩" },
+            { en: "clap", zh: "拍手;鼓掌;轻拍" },
+            { en: "compliment", zh: "恭维;称赞;赞美" },
+            { en: "astonish", zh: "使惊讶;使吃惊" },
+            { en: "dismay", zh: "使沮丧;惊慌;气馁" },
+            { en: "amaze", zh: "使惊奇;使惊愕" },
+            { en: "amuse", zh: "使娱乐;使发笑;消遣" },
+            { en: "recreation", zh: "娱乐;消遣;重建" },
+            { en: "entertain", zh: "娱乐;招待;怀抱" },
+            { en: "attain", zh: "达到;获得;实现" },
+            { en: "retain", zh: "保持;保留;记住" },
+            { en: "sustain", zh: "维持;支撑;承受" },
+            { en: "maintain", zh: "维持;维护;主张" },
+            { en: "obtain", zh: "获得;得到" },
+            { en: "pertain", zh: "关于;适合;属于" },
+            { en: "detain", zh: "拘留;扣留;耽搁" },
+            { en: "arrest", zh: "逮捕;阻止;拘留" },
+            { en: "leisure", zh: "闲暇;空闲;安逸" },
+            { en: "retire", zh: "退休;退役;退出" },
+            { en: "entire", zh: "全部的;完整的;整个的" },
+            { en: "exhaust", zh: "耗尽;使疲惫;排气" },
+            { en: "drain", zh: "排水;耗尽;流干" },
+            { en: "burnout", zh: "烧尽;筋疲力尽" },
+            { en: "fatigue", zh: "疲劳;疲惫;疲乏" },
+            { en: "obese", zh: "肥胖的;臃肿的" },
+            { en: "weary", zh: "疲惫的;厌烦的;疲倦" },
+            { en: "mere", zh: "仅仅;只不过;纯粹的" },
+            { en: "acquire", zh: "获得;学到;取得" },
+            { en: "require", zh: "需要;要求;命令" },
+            { en: "inquire", zh: "询问;调查;打听" }
+        ],
+        3: [
+            { en: "fare", zh: "费用;票价;经营" },
+            { en: "fee", zh: "费用;酬金;小费" },
+            { en: "farewell", zh: "告别;辞别;再见" },
+            { en: "welfare", zh: "福利;幸福;安宁" },
+            { en: "pension", zh: "养老金;退休金;津贴" },
+            { en: "allowance", zh: "津贴;补贴;允许" },
+            { en: "bonus", zh: "奖金;红利;额外好处" },
+            { en: "subsidy", zh: "补贴;津贴;补助金" },
+            { en: "benefit", zh: "利益;好处;受益" },
+            { en: "benevolent", zh: "仁慈的;善意的;慈善的" },
+            { en: "revenue", zh: "收入;收益;税收" },
+            { en: "avenue", zh: "大街;大道;途径" },
+            { en: "profit", zh: "利润;收益;获益" },
+            { en: "prolong", zh: "延长;拖延;拉长" },
+            { en: "profound", zh: "深刻的;深远的;渊博的" },
+            { en: "foundation", zh: "基础;基金会;建立" },
+            { en: "basis", zh: "基础;根据;基准" },
+            { en: "background", zh: "背景;经历;幕后" },
+            { en: "capital", zh: "首都;资本;大写的" },
+            { en: "loom", zh: "隐约可见;织布机;笼罩" },
+            { en: "boom", zh: "繁荣;激增;隆隆声" },
+            { en: "doom", zh: "厄运;毁灭;注定" },
+            { en: "bloom", zh: "开花;繁荣;花朵" },
+            { en: "gloom", zh: "忧郁;阴暗;昏暗" },
+            { en: "boost", zh: "促进;推动;增强" },
+            { en: "boast", zh: "吹嘘;自夸;以...为傲" },
+            { en: "toast", zh: "烤面包;干杯;祝酒" },
+            { en: "blush", zh: "脸红;羞愧;红色" },
+            { en: "flush", zh: "脸红;冲洗;奔流" },
+            { en: "splash", zh: "溅;泼;飞溅" },
+            { en: "dense", zh: "密集的;浓厚的;稠密的" },
+            { en: "condense", zh: "浓缩;凝结;精简" },
+            { en: "compact", zh: "紧凑的;简洁的;契约" },
+            { en: "impact", zh: "影响;冲击;碰撞" },
+            { en: "influence", zh: "影响;势力;感化" },
+            { en: "fluctuate", zh: "波动;起伏;变动" },
+            { en: "exert", zh: "施加;运用;发挥" },
+            { en: "powerful", zh: "强大的;有力的;有权的" },
+            { en: "force", zh: "力量;武力;强迫" },
+            { en: "enforce", zh: "实施;执行;强迫" },
+            { en: "reinforce", zh: "加强;增援;加固" },
+            { en: "democratic", zh: "民主的;民主党的" },
+            { en: "scratch", zh: "抓;刮;乱写" },
+            { en: "snatch", zh: "抢夺;夺走;迅速抓取" },
+            { en: "capture", zh: "捕获;俘获;夺取" },
+            { en: "capacity", zh: "能力;容量;生产力" },
+            { en: "generate", zh: "产生;生成;发电" },
+            { en: "squeeze", zh: "挤压;压榨;挤" },
+            { en: "breeze", zh: "微风;轻而易举的事" },
+            { en: "freeze", zh: "冻结;冷冻;结冰" },
+            { en: "frustrate", zh: "使沮丧;挫败;阻挠" },
+            { en: "setback", zh: "挫折;倒退;阻碍" },
+            { en: "discourage", zh: "使气馁;阻碍;不鼓励" },
+            { en: "encourage", zh: "鼓励;激励;支持" },
+            { en: "encouragement", zh: "鼓励;激励;支持" },
+            { en: "confident", zh: "自信的;有信心的" },
+            { en: "confidential", zh: "机密的;保密的;信任的" },
+            { en: "bold", zh: "大胆的;粗体的;勇敢的" },
+            { en: "absent", zh: "缺席的;缺乏的;不在的" },
+            { en: "present", zh: "现在的;礼物;呈现" },
+            { en: "represent", zh: "代表;表现;描绘" },
+            { en: "representative", zh: "代表;典型的;有代表性的" },
+            { en: "resent", zh: "怨恨;愤恨;厌恶" },
+            { en: "consent", zh: "同意;准许;赞同" },
+            { en: "submit", zh: "提交;屈服;主张" },
+            { en: "dismiss", zh: "解雇;解散;驳回" },
+            { en: "admit", zh: "承认;准许进入;允许" },
+            { en: "admission", zh: "承认;入场费;允许进入" },
+            { en: "summit", zh: "峰会;顶点;最高级会议" },
+            { en: "peak", zh: "山峰;顶点;高峰" },
+            { en: "missile", zh: "导弹;投射物" },
+            { en: "mission", zh: "任务;使命;代表团" },
+            { en: "missionary", zh: "传教士;传教的" },
+            { en: "emit", zh: "发射;发出;排放" },
+            { en: "omit", zh: "省略;遗漏;删除" },
+            { en: "permit", zh: "允许;许可;许可证" },
+            { en: "intermittent", zh: "间歇的;断断续续的" },
+            { en: "commit", zh: "承诺;犯罪;委托" },
+            { en: "committee", zh: "委员会;全体委员" },
+            { en: "commission", zh: "委员会;佣金;委托" },
+            { en: "transmit", zh: "传输;传播;发射" },
+            { en: "translate", zh: "翻译;转化;解释" },
+            { en: "transplant", zh: "移植;迁移;移栽" },
+            { en: "transport", zh: "运输;运输工具;运送" },
+            { en: "vehicle", zh: "车辆;交通工具;媒介" },
+            { en: "transition", zh: "过渡;转变;转换" },
+            { en: "transfer", zh: "转移;转让;转学" },
+            { en: "transit", zh: "运输;过境;经过" },
+            { en: "transient", zh: "短暂的;临时的;过客" },
+            { en: "temporary", zh: "暂时的;临时的" },
+            { en: "contemporary", zh: "当代的;同时代的;同龄人" },
+            { en: "transparent", zh: "透明的;显然的;坦率的" },
+            { en: "opaque", zh: "不透明的;难理解的;晦涩的" },
+            { en: "apparent", zh: "显然的;表面上的;貌似的" },
+            { en: "striking", zh: "显著的;惊人的;打击的" },
+            { en: "strike", zh: "罢工;打击;撞击" },
+            { en: "evident", zh: "明显的;显然的;明白的" },
+            { en: "evidence", zh: "证据;证明;迹象" },
+            { en: "proof", zh: "证明;证据;校样" },
+            { en: "approve", zh: "批准;赞成;同意" },
+            { en: "surplus", zh: "剩余;过剩;盈余" },
+            { en: "additions", zh: "添加;附加物;增加物" },
+            { en: "supplement", zh: "补充;增补;附录" },
+            { en: "complement", zh: "补充;补足;补语" },
+            { en: "multiply", zh: "繁殖;乘;增加" },
+            { en: "multitude", zh: "众多;大量;群众" },
+            { en: "host", zh: "主人;主持人;主办" },
+            { en: "landlord", zh: "房东;地主" },
+            { en: "hostile", zh: "敌对的;敌意的;不友善的" }
+        ],
+        4: [
+            { en: "bald", zh: "秃头的;光秃的;单调的" },
+            { en: "bleak", zh: "阴冷的;荒凉的;黯淡的" },
+            { en: "leak", zh: "泄漏;漏洞;泄露" },
+            { en: "blank", zh: "空白的;空白的;空白" },
+            { en: "vacant", zh: "空的;空缺的;茫然的" },
+            { en: "gap", zh: "缺口;差距;间隙" },
+            { en: "hollow", zh: "空的;空洞的;中空的" },
+            { en: "shallow", zh: "浅的;浅薄的;浅的" },
+            { en: "shadow", zh: "阴影;影子;阴影" },
+            { en: "swallow", zh: "燕子;吞下;忍受" },
+            { en: "scatter", zh: "分散;散开;散播" },
+            { en: "catalogue", zh: "目录;目录;编目" },
+            { en: "category", zh: "类别;种类;分类" },
+            { en: "appetite", zh: "食欲;欲望;胃口" },
+            { en: "petition", zh: "请愿;请愿书;请求" },
+            { en: "impetus", zh: "动力;推动力;促进" },
+            { en: "impulse", zh: "冲动;脉冲;刺激" },
+            { en: "drama", zh: "戏剧;戏剧;剧本" },
+            { en: "dramatic", zh: "戏剧性的;戏剧的;显著的" },
+            { en: "drastic", zh: "激烈的;严厉的;极端的" },
+            { en: "tragedy", zh: "悲剧;悲剧;灾难" },
+            { en: "comedy", zh: "喜剧;喜剧;喜剧片" },
+            { en: "fiction", zh: "小说;虚构;虚构" },
+            { en: "junction", zh: "连接;接合;交叉点" },
+            { en: "novel", zh: "小说;新奇的;新颖的" },
+            { en: "mystery", zh: "神秘;谜;奥秘" },
+            { en: "render", zh: "致使;提出;翻译" },
+            { en: "moist", zh: "潮湿的;湿润的;潮湿的" },
+            { en: "damp", zh: "潮湿的;湿气;潮湿" },
+            { en: "dump", zh: "倾倒;垃圾场;丢弃" },
+            { en: "humid", zh: "潮湿的;湿润的;湿润的" },
+            { en: "humiliate", zh: "羞辱;使丢脸;使蒙羞" },
+            { en: "humble", zh: "谦逊的;卑微的" },
+            { en: "humour", zh: "幽默;幽默感;幽默" },
+            { en: "humanity", zh: "人类;人道;人文" },
+            { en: "humane", zh: "仁慈的;人道的;人文的" },
+            { en: "individual", zh: "个人的;个体的;个人" },
+            { en: "divide", zh: "划分;分开" },
+            { en: "folk", zh: "民间的;人们" },
+            { en: "mass", zh: "大量;群众;质量" },
+            { en: "massive", zh: "大量的;巨大的" },
+            { en: "chunk", zh: "大块;大块;矮胖的人" },
+            { en: "mess", zh: "混乱;脏乱;混乱" },
+            { en: "chaos", zh: "混乱;混沌" },
+            { en: "disorder", zh: "混乱;紊乱" },
+            { en: "peer", zh: "凝视;同等的人" },
+            { en: "pioneer", zh: "先锋;开拓者" },
+            { en: "compatible", zh: "兼容的;相容的" },
+            { en: "being", zh: "存在;生命;生物" },
+            { en: "species", zh: "物种;种类;物种" },
+            { en: "animation", zh: "动画;活力" },
+            { en: "existence", zh: "存在;生存;存在" },
+            { en: "create", zh: "创造;创作" },
+            { en: "creature", zh: "生物;动物" },
+            { en: "concrete", zh: "具体的;混凝土" }
+        ],
+        5: [
+            { en: "absent", zh: "缺席的;缺乏的;不在的" },
+            { en: "present", zh: "现在的;礼物;呈现" },
+            { en: "represent", zh: "代表;表现;描绘" },
+            { en: "representative", zh: "代表;典型的;有代表性的" },
+            { en: "resent", zh: "怨恨;愤恨;厌恶" },
+            { en: "consent", zh: "同意;准许;赞同" },
+            { en: "submit", zh: "提交;屈服;主张" },
+            { en: "dismiss", zh: "解雇;解散;驳回" },
+            { en: "admit", zh: "承认;准许进入;允许" },
+            { en: "admission", zh: "承认;入场费;允许进入" },
+            { en: "summit", zh: "峰会;顶点;最高级会议" },
+            { en: "peak", zh: "山峰;顶点;高峰" },
+            { en: "missile", zh: "导弹;投射物" },
+            { en: "mission", zh: "任务;使命;代表团" },
+            { en: "missionary", zh: "传教士;传教的" },
+            { en: "emit", zh: "发射;发出;排放" },
+            { en: "omit", zh: "省略;遗漏;删除" },
+            { en: "permit", zh: "允许;许可;许可证" },
+            { en: "intermittent", zh: "间歇的;断断续续的" },
+            { en: "commit", zh: "承诺;犯罪;委托" },
+            { en: "committee", zh: "委员会;全体委员" },
+            { en: "commission", zh: "委员会;佣金;委托" },
+            { en: "transmit", zh: "传输;传播;发射" },
+            { en: "translate", zh: "翻译;转化;解释" },
+            { en: "transplant", zh: "移植;迁移;移栽" },
+            { en: "transport", zh: "运输;运输工具;运送" },
+            { en: "vehicle", zh: "车辆;交通工具;媒介" },
+            { en: "transition", zh: "过渡;转变;转换" },
+            { en: "transfer", zh: "转移;转让;转学" },
+            { en: "transit", zh: "运输;过境;经过" },
+            { en: "transient", zh: "短暂的;临时的;过客" },
+            { en: "temporary", zh: "暂时的;临时的" },
+            { en: "contemporary", zh: "当代的;同时代的;同龄人" },
+            { en: "transparent", zh: "透明的;显然的;坦率的" },
+            { en: "opaque", zh: "不透明的;难理解的;晦涩的" },
+            { en: "apparent", zh: "显然的;表面上的;貌似的" },
+            { en: "striking", zh: "显著的;惊人的;打击的" },
+            { en: "strike", zh: "罢工;打击;撞击" },
+            { en: "evident", zh: "明显的;显然的;明白的" },
+            { en: "evidence", zh: "证据;证明;迹象" },
+            { en: "proof", zh: "证明;证据;校样" },
+            { en: "approve", zh: "批准;赞成;同意" }
+        ],
+        6: [
+            { en: "sharp", zh: "锋利的;尖锐的;敏捷的" },
+            { en: "blunt", zh: "钝的;直率的" },
+            { en: "blunder", zh: "大错;犯大错" },
+            { en: "frank", zh: "坦白的;直率的" },
+            { en: "straightforward", zh: "直截了当的;简单的;坦率的" },
+            { en: "vertical", zh: "垂直的;直立的" },
+            { en: "cliff", zh: "悬崖;峭壁" },
+            { en: "stiff", zh: "僵硬的;生硬的" },
+            { en: "steep", zh: "陡峭的;急剧的" },
+            { en: "sincere", zh: "真诚的;诚挚的" },
+            { en: "formidable", zh: "可怕的;强大的" },
+            { en: "awe", zh: "敬畏;惊叹" },
+            { en: "absurd", zh: "荒谬的;可笑的" },
+            { en: "ridiculous", zh: "可笑的;荒谬的" },
+            { en: "plausible", zh: "看似合理的;似乎可信的" },
+            { en: "deploy", zh: "部署;配置" },
+            { en: "employment", zh: "就业;雇佣" },
+            { en: "plot", zh: "情节;阴谋" },
+            { en: "tender", zh: "温柔的;嫩的" },
+            { en: "mild", zh: "温和的;轻微的" },
+            { en: "vulnerable", zh: "易受伤害的;脆弱的" },
+            { en: "feeble", zh: "虚弱的;无力的" },
+            { en: "tremble", zh: "颤抖;发抖" },
+            { en: "lean", zh: "倾斜;依靠;瘦的" },
+            { en: "amiable", zh: "和蔼的;亲切的" },
+            { en: "anxious", zh: "焦虑的;渴望的" },
+            { en: "arrogant", zh: "傲慢的;自大的" },
+            { en: "eloquent", zh: "雄辩的;有口才的" },
+            { en: "giant", zh: "巨人;巨大的" },
+            { en: "gigantic", zh: "巨大的;庞大的" },
+            { en: "immense", zh: "巨大的;广大的" },
+            { en: "tremendous", zh: "巨大的;极大的" },
+            { en: "enormous", zh: "巨大的;庞大的" },
+            { en: "numerous", zh: "众多的;许多的" },
+            { en: "numerical", zh: "数字的;数值的" },
+            { en: "plentiful", zh: "丰富的;大量的" },
+            { en: "handsome", zh: "英俊的;可观的" },
+            { en: "flock", zh: "群;聚集" },
+            { en: "abundant", zh: "丰富的;充裕的" },
+            { en: "redundant", zh: "多余的;冗余的" },
+            { en: "superfluous", zh: "多余的;过剩的" },
+            { en: "extravagant", zh: "奢侈的;过度的" },
+            { en: "luxury", zh: "奢侈;豪华" },
+            { en: "surplus", zh: "剩余;过剩;盈余" },
+            { en: "additions", zh: "添加;附加物;增加物" },
+            { en: "supplement", zh: "补充;增补;附录" },
+            { en: "complement", zh: "补充;补足;补语" },
+            { en: "multiply", zh: "繁殖;乘;增加" },
+            { en: "multitude", zh: "众多;大量;群众" },
+            { en: "host", zh: "主人;主持人;主办" },
+            { en: "landlord", zh: "房东;地主" },
+            { en: "hostile", zh: "敌对的;敌意的;不友善的" }
+        ],
+        7: [
+            { en: "persuade", zh: "说服;劝说;使相信" },
+            { en: "lobby", zh: "大厅;休息室;游说" },
+            { en: "urge", zh: "催促;强烈要求;力劝" },
+            { en: "haste", zh: "匆忙;急速;草率" },
+            { en: "hasty", zh: "匆忙的;草率的;仓促的" },
+            { en: "agent", zh: "代理人;代理商;动因" },
+            { en: "agency", zh: "代理处;机构;中介" },
+            { en: "deputy", zh: "副手;代理人;代表" },
+            { en: "client", zh: "客户;顾客;委托人" },
+            { en: "customer", zh: "顾客;客户" },
+            { en: "custom", zh: "习惯;风俗;定制" },
+            { en: "customs", zh: "海关;习俗;惯例" },
+            { en: "tradition", zh: "传统;惯例;传说" },
+            { en: "convention", zh: "惯例;大会;公约" },
+            { en: "treaty", zh: "条约;协议;谈判" },
+            { en: "treat", zh: "对待;治疗;款待" },
+            { en: "trick", zh: "诡计;技巧;欺骗" },
+            { en: "retreat", zh: "撤退;退却;躲避" },
+            { en: "withdraw", zh: "撤回;退出;提取" },
+            { en: "rough", zh: "粗糙的;粗略的;粗暴的" },
+            { en: "thorough", zh: "彻底的;详尽的;完全的" },
+            { en: "absolute", zh: "绝对的;完全的;无条件的" },
+            { en: "sheer", zh: "纯粹的;绝对的;陡峭的" },
+            { en: "tough", zh: "困难的;坚强的;粗暴的" },
+            { en: "negative", zh: "消极的;否定的;负的" },
+            { en: "optimistic", zh: "乐观的;乐观主义的" },
+            { en: "pessimistic", zh: "悲观的;悲观主义的" },
+            { en: "passive", zh: "被动的;消极的;被动的" },
+            { en: "passion", zh: "激情;热情;酷爱" },
+            { en: "compassion", zh: "同情;怜悯;仁慈" },
+            { en: "excitement", zh: "兴奋;激动;刺激" },
+            { en: "enthusiastic", zh: "热情的;热心的;狂热的" },
+            { en: "thrill", zh: "激动;震颤;使激动" },
+            { en: "energy", zh: "能量;精力;活力" },
+            { en: "energetic", zh: "精力充沛的;积极的" },
+            { en: "vigorous", zh: "精力充沛的;有力的;强健的" },
+            { en: "dynamic", zh: "动态的;动力的;有活力的" },
+            { en: "neglect", zh: "忽视;忽略;疏忽" },
+            { en: "ignore", zh: "忽视;无视;忽略" },
+            { en: "ignorant", zh: "无知的;愚昧的;不知道的" },
+            { en: "emphasise", zh: "强调;着重;加强语气" },
+            { en: "annoy", zh: "使烦恼;使恼怒;打扰" },
+            { en: "bother", zh: "打扰;烦扰;麻烦" },
+            { en: "bore", zh: "使厌烦;钻孔;令人讨厌的人" },
+            { en: "tedious", zh: "冗长乏味的;沉闷的;单调的" },
+            { en: "tedium", zh: "单调乏味;冗长;厌烦" }
+        ],
+        8: [
+            { en: "cheat", zh: "欺骗;作弊;骗子" },
+            { en: "fraud", zh: "欺诈;骗子;骗局" },
+            { en: "deceive", zh: "欺骗;蒙蔽;行骗" },
+            { en: "perceive", zh: "感知;察觉;理解" },
+            { en: "conceive", zh: "构思;怀孕;设想" },
+            { en: "frame", zh: "框架;结构;陷害" },
+            { en: "flame", zh: "火焰;热情;燃烧" },
+            { en: "flare", zh: "闪耀;闪光;爆发" },
+            { en: "flee", zh: "逃跑;逃避;消散" },
+            { en: "flatter", zh: "奉承;谄媚;使高兴" },
+            { en: "idle", zh: "闲置的;懒惰的;无所事事" },
+            { en: "adolescent", zh: "青少年;青春期的" },
+            { en: "linger", zh: "徘徊;逗留;拖延" },
+            { en: "wander", zh: "漫步;徘徊;迷路" },
+            { en: "stride", zh: "大步;跨越;步幅" },
+            { en: "swarm", zh: "蜂群;一大群;挤满" },
+            { en: "crawl", zh: "爬行;匍匐前进;缓慢移动" },
+            { en: "stroll", zh: "散步;闲逛;漫步" },
+            { en: "enrol", zh: "注册;登记;招收" },
+            { en: "recruit", zh: "招募;招聘;新兵" },
+            { en: "register", zh: "登记;注册;记录" },
+            { en: "drag", zh: "拖;拉;拖拽" },
+            { en: "lag", zh: "滞后;落后;延迟" },
+            { en: "challenge", zh: "挑战;质疑;挑战" },
+            { en: "tag", zh: "标签;标记;附加" },
+            { en: "label", zh: "标签;标记;标注" },
+            { en: "brand", zh: "品牌;商标;烙印" },
+            { en: "faint", zh: "微弱的;昏倒;模糊的" },
+            { en: "stun", zh: "使震惊;使眩晕;打晕" },
+            { en: "dizzy", zh: "头晕的;眩晕的;使人头晕的" },
+            { en: "dazzle", zh: "使目眩;使眼花缭乱;耀眼" },
+            { en: "charm", zh: "魅力;吸引力;迷住" },
+            { en: "elegant", zh: "优雅的;高雅的;精致的" },
+            { en: "grace", zh: "优雅;恩典;优美" },
+            { en: "disgrace", zh: "耻辱;丢脸;使丢脸" },
+            { en: "glow", zh: "发光;发热;脸红" },
+            { en: "polish", zh: "擦亮;磨光;润色" },
+            { en: "sparkle", zh: "闪耀;闪光;活力" },
+            { en: "twinkle", zh: "闪烁;闪耀;眨眼" },
+            { en: "radiate", zh: "辐射;散发;放射" },
+            { en: "flash", zh: "闪光;闪现;一瞬间" },
+            { en: "glitter", zh: "闪烁;闪光;耀眼" },
+            { en: "litter", zh: "垃圾;乱丢;杂乱" },
+            { en: "literature", zh: "文学;文献;著作" },
+            { en: "literary", zh: "文学的;书面的;精通文学的" },
+            { en: "literal", zh: "字面的;逐字的;文字的" },
+            { en: "literacy", zh: "读写能力;识字;文化" },
+            { en: "verbal", zh: "口头的;言语的;动词的" }
+        ],
+        9: [
+            { en: "scarce", zh: "缺乏的;不足的;稀有的" },
+            { en: "scarcity", zh: "稀缺;不足;缺乏" },
+            { en: "carpenter", zh: "木匠;木工" },
+            { en: "craft", zh: "工艺;手艺;手工" },
+            { en: "career", zh: "职业;生涯;事业" },
+            { en: "carpet", zh: "地毯;地毯状覆盖物" },
+            { en: "scar", zh: "伤疤;疤痕;创伤" },
+            { en: "compensate", zh: "补偿;赔偿;报酬" },
+            { en: "hesitate", zh: "犹豫;踌躇;不愿" },
+            { en: "negotiate", zh: "谈判;协商;洽谈" },
+            { en: "candidate", zh: "候选人;应试者;求职者" },
+            { en: "considerate", zh: "体贴的;考虑周到的" },
+            { en: "considerable", zh: "相当大的;重要的;值得考虑的" },
+            { en: "imitate", zh: "模仿;仿效;仿制" },
+            { en: "analogy", zh: "类比;类推;类似" },
+            { en: "dialogue", zh: "对话;对白;交换意见" },
+            { en: "via", zh: "通过;经由;凭借" },
+            { en: "simulate", zh: "模拟;模仿;假装" },
+            { en: "stimulate", zh: "刺激;激励;促进" },
+            { en: "simultaneous", zh: "同时的;同步的;同时发生的" },
+            { en: "similar", zh: "相似的;类似的" },
+            { en: "assimilate", zh: "吸收;同化;消化" },
+            { en: "absorb", zh: "吸收;吸收;使全神贯注" },
+            { en: "incorporate", zh: "合并;包含;吸收" },
+            { en: "equal", zh: "平等的;相等的;等于" },
+            { en: "even", zh: "甚至;平坦的;偶数的" },
+            { en: "equivalent", zh: "等价的;相等的;等价物" },
+            { en: "adequate", zh: "足够的;适当的;胜任的" },
+            { en: "symphony", zh: "交响乐;交响曲;和谐" },
+            { en: "postpone", zh: "推迟;延迟;延期" },
+            { en: "delay", zh: "延迟;耽搁;延误" },
+            { en: "defer", zh: "推迟;延期;服从" },
+            { en: "differ", zh: "不同;相异;有区别" },
+            { en: "indifferent", zh: "漠不关心的;冷漠的;平庸的" },
+            { en: "suffer", zh: "遭受;忍受;经历" },
+            { en: "infer", zh: "推断;推论;暗示" },
+            { en: "refer", zh: "参考;涉及;提到" },
+            { en: "reference", zh: "参考;参考资料;引用" },
+            { en: "confer", zh: "授予;商议;协商" },
+            { en: "fertile", zh: "肥沃的;多产的;富饶的" },
+            { en: "prefer", zh: "更喜欢;宁愿;偏好" }
+        ],
+        10: [
+            { en: "previous", zh: "先前的;以前的;早先的" },
+            { en: "prior", zh: "优先的;在先的;更重要的" },
+            { en: "priority", zh: "优先;优先权;优先事项" },
+            { en: "prevail", zh: "流行;盛行;获胜" },
+            { en: "avail", zh: "效用;利用;有益于" },
+            { en: "prevalent", zh: "流行的;普遍的;盛行的" },
+            { en: "channel", zh: "渠道;频道;通道" },
+            { en: "means", zh: "手段;方法;财产" },
+            { en: "mean", zh: "意思是;意味着;吝啬的" },
+            { en: "generous", zh: "慷慨的;大方的;宽宏大量的" },
+            { en: "manner", zh: "方式;态度;举止" },
+            { en: "style", zh: "风格;方式;样式" },
+            { en: "fashion", zh: "时尚;流行;方式" },
+            { en: "genre", zh: "类型;流派;体裁" },
+            { en: "typical", zh: "典型的;代表性的;特有的" },
+            { en: "classic", zh: "经典的;古典的;经典作品" },
+            { en: "upgrade", zh: "升级;提升;提高" },
+            { en: "degree", zh: "程度;学位;等级" },
+            { en: "mode", zh: "模式;方式;风格" },
+            { en: "modest", zh: "谦虚的;适度的;谦逊的" },
+            { en: "earnest", zh: "认真的;诚挚的;热心的" },
+            { en: "modify", zh: "修改;修饰;更改" },
+            { en: "moderate", zh: "适度的;温和的;节制" },
+            { en: "rate", zh: "比率;速度;评价" },
+            { en: "tolerate", zh: "容忍;忍受;宽容" },
+            { en: "undergo", zh: "经历;遭受;承受" },
+            { en: "endure", zh: "忍受;忍耐;持续" },
+            { en: "duration", zh: "持续;持续时间;期间" },
+            { en: "exaggerate", zh: "夸张;夸大;言过其实" },
+            { en: "demonstrate", zh: "证明;展示;论证" },
+            { en: "illustrate", zh: "说明;阐明;举例说明" },
+            { en: "exemplify", zh: "例证;例示;作为...的榜样" },
+            { en: "indicate", zh: "指示;表明;指出" },
+            { en: "indication", zh: "指示;迹象;指示物" },
+            { en: "cue", zh: "提示;暗示;线索" },
+            { en: "glue", zh: "胶;胶水;粘合" },
+            { en: "clue", zh: "线索;提示;暗示" },
+            { en: "hint", zh: "暗示;提示;线索" },
+            { en: "manifest", zh: "明显的;显示;表明" },
+            { en: "embody", zh: "体现;包含;使具体化" },
+            { en: "embrace", zh: "拥抱;包含;接受" },
+            { en: "imply", zh: "暗示;意味;隐含" },
+            { en: "implicit", zh: "隐含的;含蓄的;绝对的" },
+            { en: "explicit", zh: "明确的;清晰的;直率的" },
+            { en: "display", zh: "显示;展示;陈列" },
+            { en: "exhibit", zh: "展览;展示;展品" },
+            { en: "prohibit", zh: "禁止;阻止;妨碍" },
+            { en: "forbid", zh: "禁止;不许;阻止" },
+            { en: "ban", zh: "禁止;禁令;取缔" }
+        ],
+        11: [
+            { en: "advance", zh: "前进;进展;提前" },
+            { en: "advantage", zh: "优势;有利条件;好处" },
+            { en: "invent", zh: "发明;创造;虚构" },
+            { en: "invest", zh: "投资;投入" },
+            { en: "investigate", zh: "调查;研究;审查" },
+            { en: "examine", zh: "检查;考试;调查" },
+            { en: "scrutiny", zh: "详细审查;监视;细看" },
+            { en: "screw", zh: "螺丝;螺丝钉;拧紧" },
+            { en: "crew", zh: "全体船员;全体人员;团队" },
+            { en: "staff", zh: "员工;职员;工作人员" },
+            { en: "stuff", zh: "东西;材料;填充" },
+            { en: "probe", zh: "探针;调查;探测" },
+            { en: "analyse", zh: "分析;研究;分解" },
+            { en: "survey", zh: "调查;测量;审视" },
+            { en: "convey", zh: "传达;运输;转让" },
+            { en: "deliver", zh: "交付;递送;发表" },
+            { en: "statistic", zh: "统计;统计数据;统计学" },
+            { en: "data", zh: "数据;资料;datum的复数" },
+            { en: "organ", zh: "器官;机构;风琴" },
+            { en: "organic", zh: "有机的;器官的;组织的" },
+            { en: "organism", zh: "有机体;生物体;微生物" },
+            { en: "organise", zh: "组织;安排;筹办" },
+            { en: "function", zh: "功能;函数;运行" },
+            { en: "silence", zh: "沉默;寂静;使安静" },
+            { en: "mute", zh: "静音的;哑的;哑巴" },
+            { en: "diminish", zh: "减少;缩小;降低" },
+            { en: "plunge", zh: "投入;跳进;暴跌" },
+            { en: "slump", zh: "暴跌;衰退;下降" },
+            { en: "lump", zh: "块;肿块;成团" },
+            { en: "slack", zh: "松弛的;懈怠的;淡季" },
+            { en: "bubble", zh: "气泡;泡沫;冒泡" },
+            { en: "foam", zh: "泡沫;泡沫;起泡沫" },
+            { en: "breakdown", zh: "故障;崩溃;分解" },
+            { en: "collapse", zh: "崩溃;倒塌;瓦解" },
+            { en: "elapse", zh: "流逝;过去;消逝" },
+            { en: "conquer", zh: "征服;战胜;攻克" },
+            { en: "defeat", zh: "击败;战胜;失败" },
+            { en: "defend", zh: "防御;保卫;辩护" },
+            { en: "offend", zh: "冒犯;违反;得罪" },
+            { en: "guard", zh: "守卫;警戒;保护" },
+            { en: "shield", zh: "盾;防护物;保护" },
+            { en: "attack", zh: "攻击;袭击;抨击" },
+            { en: "tactic", zh: "策略;战术;手法" },
+            { en: "strategy", zh: "战略;策略;策略" },
+            { en: "technique", zh: "技术;技巧;手法" },
+            { en: "nasty", zh: "肮脏的;恶心的;下流的" },
+            { en: "contrast", zh: "对比;对照;差异" },
+            { en: "comparison", zh: "比较;对比;比喻" },
+            { en: "compare", zh: "比较;对比;相比" },
+            { en: "strip", zh: "条;带;剥去" },
+            { en: "stripe", zh: "条纹;斑纹;条纹" }
+        ],
+        12: [
+            { en: "desirable", zh: "令人向往的;值得的;合意的" },
+            { en: "keen", zh: "敏锐的;渴望的;热心的" },
+            { en: "eager", zh: "渴望的;热切的;急切的" },
+            { en: "eagle", zh: "鹰;鹰状标志" },
+            { en: "discern", zh: "识别;辨别;看出" },
+            { en: "despair", zh: "绝望;丧失信心;绝望" },
+            { en: "desperately", zh: "绝望地;拼命地;极度地" },
+            { en: "disaster", zh: "灾难;灾祸;不幸" },
+            { en: "famine", zh: "饥荒;饥饿;匮乏" },
+            { en: "drought", zh: "干旱;旱灾" },
+            { en: "laundry", zh: "洗衣店;洗衣;要洗的衣服" },
+            { en: "deadly", zh: "致命的;极度的;死一般的" },
+            { en: "scandal", zh: "丑闻;流言蜚语;诽谤" },
+            { en: "scan", zh: "扫描;浏览;审视" },
+            { en: "skim", zh: "撇去;浏览;掠过" },
+            { en: "glare", zh: "怒视;耀眼" },
+            { en: "glimpse", zh: "一瞥;瞥见;一看" },
+            { en: "glance", zh: "一瞥;扫视;浏览" },
+            { en: "gaze", zh: "凝视;注视;盯着" },
+            { en: "peep", zh: "偷看;窥视;瞥见" },
+            { en: "browse", zh: "浏览;吃草;闲逛" },
+            { en: "stare", zh: "凝视;盯着;注视" },
+            { en: "dusk", zh: "黄昏;薄暮;幽暗" },
+            { en: "dawn", zh: "黎明;破晓;开始" },
+            { en: "launch", zh: "发射;发起;推出" },
+            { en: "initiate", zh: "启动;发起;开创" },
+            { en: "primary", zh: "主要的;初级的;首要的" },
+            { en: "primitive", zh: "原始的;简单的;粗糙的" },
+            { en: "prime", zh: "主要的;最好的;全盛时期" },
+            { en: "origin", zh: "起源;原点;出身" },
+            { en: "originate", zh: "起源;发源;创造" },
+            { en: "region", zh: "地区;区域;范围" },
+            { en: "stem", zh: "茎;干;阻止" },
+            { en: "cradle", zh: "摇篮;发源地;抚育" },
+            { en: "source", zh: "来源;源头;消息来源" },
+            { en: "resource", zh: "资源;财力;办法" },
+            { en: "timber", zh: "木材;木料;树木" },
+            { en: "routine", zh: "常规;日常工作;例行的" },
+            { en: "route", zh: "路线;路径;航线" },
+            { en: "agenda", zh: "议程;日程;议题" },
+            { en: "schedule", zh: "时间表;计划;安排" },
+            { en: "scheme", zh: "计划;方案;阴谋" },
+            { en: "accomplish", zh: "完成;实现;达到" },
+            { en: "achieve", zh: "实现;达到;获得" },
+            { en: "fulfill", zh: "履行;实现;满足" },
+            { en: "complete", zh: "完成;完整的;完全的" },
+            { en: "victory", zh: "胜利;成功;克服" },
+            { en: "triumph", zh: "胜利;凯旋;成功" },
+            { en: "delight", zh: "高兴;快乐;使高兴" },
+            { en: "plight", zh: "困境;境况;誓约" },
+            { en: "blight", zh: "枯萎病;破坏;使枯萎" },
+            { en: "alight", zh: "下车;落下;点亮" },
+            { en: "slight", zh: "轻微的;少量的;轻视" },
+            { en: "ignite", zh: "点燃;点火;使激动" },
+            { en: "highlight", zh: "强调;突出;高亮" }
+        ],
+        13: [
+            { en: "patience", zh: "耐心;忍耐;容忍" },
+            { en: "pace", zh: "步伐;速度;步速" },
+            { en: "step", zh: "步骤;步;脚步" },
+            { en: "patent", zh: "专利;专利权;专利的" },
+            { en: "apply", zh: "申请;应用;适用" },
+            { en: "applicable", zh: "可应用的;适用的;合适的" },
+            { en: "applicant", zh: "申请人;申请者" },
+            { en: "appliance", zh: "器具;器械;装置" },
+            { en: "apparatus", zh: "装置;设备;仪器" },
+            { en: "device", zh: "装置;设备;手段" },
+            { en: "equip", zh: "装备;配备;准备" },
+            { en: "instrument", zh: "仪器;工具;乐器" },
+            { en: "mechanism", zh: "机制;机械;机构" },
+            { en: "melt", zh: "融化;熔化;溶解" },
+            { en: "tame", zh: "驯服的;温顺的;驯服" },
+            { en: "lame", zh: "跛的;瘸的;无说服力的" },
+            { en: "blame", zh: "责备;指责;责怪" },
+            { en: "quarrel", zh: "争吵;吵架;争论" },
+            { en: "curse", zh: "诅咒;咒骂;祸根" },
+            { en: "accuse", zh: "指责;控告;指控" },
+            { en: "engage", zh: "参与;雇佣;订婚" },
+            { en: "marital", zh: "婚姻的;夫妻的" },
+            { en: "pregnant", zh: "怀孕的;孕育的" },
+            { en: "divorce", zh: "离婚;分离;离婚" },
+            { en: "spouse", zh: "配偶;夫妻" },
+            { en: "couple", zh: "一对;夫妇" },
+            { en: "single", zh: "单一的;单个的;单身的" },
+            { en: "heir", zh: "继承人;后嗣" },
+            { en: "heritage", zh: "遗产;传统;继承物" },
+            { en: "legacy", zh: "遗产;遗赠;遗留" },
+            { en: "inherit", zh: "继承;遗传;继承" },
+            { en: "household", zh: "家庭;户;家庭的" },
+            { en: "uphold", zh: "支持;维护;维持" },
+            { en: "hoist", zh: "升起;吊起;起重机" },
+            { en: "elevate", zh: "提升;举起;提高" },
+            { en: "lift", zh: "举起;抬起;电梯" },
+            { en: "eligible", zh: "合格的;有资格的;合适的" },
+            { en: "quality", zh: "质量;品质;素质" },
+            { en: "ally", zh: "盟友;同盟国;联盟" },
+            { en: "rely", zh: "依靠;依赖;信赖" },
+            { en: "reliable", zh: "可靠的;可信赖的" },
+            { en: "liable", zh: "有责任的;易受...影响的" },
+            { en: "credible", zh: "可信的;可靠的" },
+            { en: "incredible", zh: "难以置信的;惊人的" },
+            { en: "skeptical", zh: "怀疑的;怀疑论的" },
+            { en: "dubious", zh: "可疑的;怀疑的;暧昧的" },
+            { en: "doubtful", zh: "可疑的;怀疑的;不确定的" },
+            { en: "ambiguous", zh: "模糊的;模棱两可的;歧义的" },
+            { en: "dim", zh: "昏暗的;模糊的;暗淡的" },
+            { en: "dilemma", zh: "困境;进退两难;窘境" },
+            { en: "dimension", zh: "维度;尺寸;维度" },
+            { en: "measure", zh: "测量;措施;度量" },
+            { en: "scale", zh: "规模;刻度;天平" },
+            { en: "cement", zh: "水泥;胶合;巩固" }
+        ],
+        14: [
+            { en: "fearful", zh: "可怕的;害怕的;担心的" },
+            { en: "fierce", zh: "凶猛的;猛烈的" },
+            { en: "coward", zh: "懦夫;胆小的人" },
+            { en: "timid", zh: "胆小的;羞怯的" },
+            { en: "intimidate", zh: "恐吓;威胁;胁迫" },
+            { en: "threat", zh: "威胁;恐吓;凶兆" },
+            { en: "fright", zh: "惊吓;恐怖;惊骇" },
+            { en: "terror", zh: "恐怖;恐惧;惊骇" },
+            { en: "terrify", zh: "使恐怖;使害怕;恐吓" },
+            { en: "rebel", zh: "反叛;反抗;叛乱者" },
+            { en: "alarm", zh: "警报;惊恐;警告" },
+            { en: "panic", zh: "恐慌;惊慌;恐慌的" },
+            { en: "caution", zh: "小心;谨慎;警告" },
+            { en: "precaution", zh: "预防;预防措施;警惕" },
+            { en: "prudent", zh: "谨慎的;精明的;节俭的" },
+            { en: "alert", zh: "警惕的;警觉的;警报" },
+            { en: "slip", zh: "滑;滑倒;溜走" },
+            { en: "tenant", zh: "租户;承租人;房客" },
+            { en: "rent", zh: "租金;租;租用" },
+            { en: "lease", zh: "租约;租赁;租" },
+            { en: "release", zh: "释放;发布;释放" },
+            { en: "publicity", zh: "宣传;公开" },
+            { en: "bulletin", zh: "公告;公报;布告" },
+            { en: "publish", zh: "出版;发布;发表" },
+            { en: "private", zh: "私人的;私有的;私下的" },
+            { en: "punish", zh: "惩罚;处罚;严厉对待" },
+            { en: "issue", zh: "问题;发行;发布" },
+            { en: "tissue", zh: "组织;纸巾;薄纱" },
+            { en: "phenomenon", zh: "现象;奇迹;现象" },
+            { en: "brilliant", zh: "杰出的;灿烂的;聪明的" },
+            { en: "terrific", zh: "极好的;了不起的;可怕的" },
+            { en: "magnificent", zh: "壮丽的;宏伟的;华丽的" },
+            { en: "magnify", zh: "放大;扩大;赞美" },
+            { en: "fabulous", zh: "极好的;难以置信的;传说的" },
+            { en: "fabricate", zh: "制造;伪造;捏造" },
+            { en: "fabric", zh: "织物;布;结构" },
+            { en: "marvellous", zh: "非凡的;极好的;绝妙的" },
+            { en: "marvel", zh: "奇迹;惊奇;对...感到惊奇" },
+            { en: "extraordinary", zh: "非凡的;特别的;离奇的" },
+            { en: "eminent", zh: "杰出的;有名的;明显的" },
+            { en: "prominent", zh: "突出的;显著的;杰出的" },
+            { en: "outstanding", zh: "杰出的;显著的;突出的" },
+            { en: "exception", zh: "例外;除外;异议" },
+            { en: "exceptional", zh: "例外的;异常的;杰出的" },
+            { en: "remark", zh: "评论;备注;注意" },
+            { en: "remarkable", zh: "显著的;非凡的;值得注意的" },
+            { en: "remarkably", zh: "显著地;非常地;引人注目地" },
+            { en: "comment", zh: "评论;注释;评论" }
+        ],
+        15: [
+            { en: "critic", zh: "批评家;评论家;批评者" },
+            { en: "criticism", zh: "批评;批判;评论" },
+            { en: "critical", zh: "批评的;关键的;临界的" },
+            { en: "criterion", zh: "标准;准则;规范" },
+            { en: "irony", zh: "反讽;讽刺;讽刺" },
+            { en: "satire", zh: "讽刺;讽刺文学;讽刺" },
+            { en: "delete", zh: "删除;删去;删掉" },
+            { en: "erase", zh: "抹去;擦除;清除" },
+            { en: "eradicate", zh: "根除;消灭;根绝" },
+            { en: "cancel", zh: "取消;撤销;废除" },
+            { en: "console", zh: "安慰;控制台;慰藉" },
+            { en: "counsel", zh: "建议;法律顾问" },
+            { en: "consult", zh: "咨询;请教;参考" },
+            { en: "insult", zh: "侮辱;冒犯;辱骂" },
+            { en: "prompt", zh: "迅速的;提示;促进" },
+            { en: "promote", zh: "促进;提升;推广" },
+            { en: "promotion", zh: "晋升;推广;促销" },
+            { en: "push", zh: "推;推动;逼迫" },
+            { en: "pull", zh: "拉;拖;拉" },
+            { en: "motion", zh: "运动;动作;移动" },
+            { en: "remote", zh: "遥远的;远程的;偏僻的" },
+            { en: "motive", zh: "动机;目的;动机" },
+            { en: "motivate", zh: "激励;激发;促动" },
+            { en: "remove", zh: "移除;去掉;移开" },
+            { en: "emotion", zh: "情绪;情感;感情" },
+            { en: "rational", zh: "理性的;合理的;理智的" },
+            { en: "irrational", zh: "不合理的;无理性的;非理性的" },
+            { en: "reasonable", zh: "合理的;公道的;通情达理的" },
+            { en: "advisable", zh: "明智的;可取的;适当的" },
+            { en: "noticeable", zh: "明显的;显著的;值得注意的" },
+            { en: "noteworthy", zh: "值得注意的;显著的;重要的" },
+            { en: "notable", zh: "值得注意的;显著的;名人" },
+            { en: "noble", zh: "高尚的;贵族的;高贵的" },
+            { en: "celebrity", zh: "名人;名声;著名" },
+            { en: "celebrate", zh: "庆祝;赞美;庆祝" },
+            { en: "ceremony", zh: "仪式;典礼;礼节" },
+            { en: "feast", zh: "盛宴;节日;享受" },
+            { en: "ritual", zh: "仪式;惯例;仪式的" },
+            { en: "holy", zh: "神圣的;圣洁的;神圣的" },
+            { en: "sacred", zh: "神圣的;庄严的;神圣的" },
+            { en: "royal", zh: "皇家的;王室的;盛大的" },
+            { en: "loyal", zh: "忠诚的;忠心的;忠实的" },
+            { en: "faithful", zh: "忠实的;忠诚的;如实的" },
+            { en: "stress", zh: "压力;强调;紧张" },
+            { en: "distress", zh: "痛苦;危难;使悲痛" },
+            { en: "agony", zh: "痛苦;苦恼;极大的痛苦" },
+            { en: "misery", zh: "痛苦;悲惨;苦难" },
+            { en: "painful", zh: "痛苦的;疼痛的;令人痛苦的" },
+            { en: "torture", zh: "折磨;拷问;痛苦" },
+            { en: "torment", zh: "折磨;痛苦" },
+            { en: "retort", zh: "反驳;反击;蒸馏" },
+            { en: "distort", zh: "扭曲;歪曲;变形" }
+        ],
+        16: [
+            { en: "derive", zh: "源自;获得;推导" },
+            { en: "deprive", zh: "剥夺;丧失;使失去" },
+            { en: "thrive", zh: "繁荣;兴旺;茁壮成长" },
+            { en: "strive", zh: "努力;奋斗;力争" },
+            { en: "contrive", zh: "设计;发明;谋划" },
+            { en: "statement", zh: "声明;陈述;说明" },
+            { en: "status", zh: "状态;地位;身份" },
+            { en: "statue", zh: "雕像;塑像;雕塑" },
+            { en: "liberate", zh: "解放;释放; liberation" },
+            { en: "deliberate", zh: "故意的;深思熟虑的;仔细考虑" },
+            { en: "devote", zh: "奉献;投入;致力于" },
+            { en: "dedicate", zh: "奉献;献身;致力" },
+            { en: "delicate", zh: "精致的;微妙的;脆弱的" },
+            { en: "decay", zh: "腐烂;衰退;衰减" },
+            { en: "erode", zh: "侵蚀;腐蚀;磨损" },
+            { en: "advocate", zh: "提倡;拥护;倡导者" },
+            { en: "following", zh: "接下来的;下列的;跟随" },
+            { en: "provoke", zh: "激怒;挑衅;煽动" },
+            { en: "trigger", zh: "触发;引发;扳机" },
+            { en: "evoke", zh: "唤起;引起; evoke" },
+            { en: "agitate", zh: "搅动;煽动;使不安" },
+            { en: "stir", zh: "搅拌;搅动;激起" },
+            { en: "blend", zh: "混合;调和;混合物" },
+            { en: "mixture", zh: "混合;混合物;混合剂" },
+            { en: "turbulent", zh: "动荡的;混乱的;汹涌的" },
+            { en: "bend", zh: "弯曲;弯腰;使弯曲" },
+            { en: "bond", zh: "债券;结合;纽带" },
+            { en: "bind", zh: "绑定;捆绑;约束" },
+            { en: "bench", zh: "长椅;工作台;法官席" },
+            { en: "bound", zh: "束缚;界限;必然的" },
+            { en: "abound", zh: "大量存在;充满;富于" },
+            { en: "bid", zh: "投标;出价;命令" },
+            { en: "auction", zh: "拍卖;拍卖;竞卖" },
+            { en: "sanction", zh: "制裁;批准;认可" },
+            { en: "protest", zh: "抗议;反对;抗议" },
+            { en: "detest", zh: "厌恶;痛恨;嫌恶" },
+            { en: "contest", zh: "竞赛;争夺;争论" },
+            { en: "context", zh: "上下文;语境;背景" },
+            { en: "setting", zh: "设置;环境;背景" },
+            { en: "incline", zh: "倾向;倾斜;使倾向" },
+            { en: "decline", zh: "下降;衰退;谢绝" },
+            { en: "prone", zh: "易于...的;倾向于;俯卧的" },
+            { en: "apt", zh: "易于...的;恰当的;聪明的" },
+            { en: "opt", zh: "选择;挑选" },
+            { en: "option", zh: "选择;选项;选择权" },
+            { en: "compulsory", zh: "义务的;强制的;必修的" },
+            { en: "discipline", zh: "纪律;学科;训练" },
+            { en: "principal", zh: "校长;主要的;本金" },
+            { en: "principle", zh: "原则;原理;准则" }
+        ],
+        17: [
+            { en: "expend", zh: "花费;消耗;支出" },
+            { en: "spread", zh: "传播;蔓延;展开" },
+            { en: "widespread", zh: "广泛的;普遍的;分布广的" },
+            { en: "stretch", zh: "伸展;延伸;拉伸" },
+            { en: "extend", zh: "延伸;扩展;延长" },
+            { en: "extent", zh: "程度;范围;长度" },
+            { en: "tend", zh: "倾向;照料;趋向" },
+            { en: "tendency", zh: "趋势;倾向;趋向" },
+            { en: "trend", zh: "趋势;倾向;潮流" },
+            { en: "attend", zh: "参加;出席;照料" },
+            { en: "contend", zh: "竞争;奋斗;主张" },
+            { en: "content", zh: "内容;满足;满意的" },
+            { en: "tent", zh: "帐篷;帐篷" },
+            { en: "camp", zh: "露营;营地;阵营" },
+            { en: "intend", zh: "打算;想要;意图" },
+            { en: "intention", zh: "意图;目的;意向" },
+            { en: "pretend", zh: "假装;伪装;装作" },
+            { en: "disguise", zh: "伪装;掩饰;假装" },
+            { en: "mask", zh: "面具;口罩;掩饰" },
+            { en: "screen", zh: "屏幕;屏幕;筛选" },
+            { en: "veil", zh: "面纱;面纱;掩盖" },
+            { en: "conceal", zh: "隐藏;隐瞒;掩盖" },
+            { en: "reveal", zh: "揭示;透露;显示" },
+            { en: "betray", zh: "背叛;出卖;泄露" },
+            { en: "uncover", zh: "揭露;发现;揭开" },
+            { en: "disclose", zh: "披露;揭露;公开" },
+            { en: "enclose", zh: "围绕;装入;附上" },
+            { en: "detect", zh: "检测;发现;探测" },
+            { en: "ascertain", zh: "确定;查明;弄清" },
+            { en: "certify", zh: "证明;保证; certify" },
+            { en: "certificate", zh: "证书;证明;文凭" },
+            { en: "licence", zh: "许可证;执照;许可" },
+            { en: "diploma", zh: "文凭;毕业证书;学位证书" },
+            { en: "diplomat", zh: "外交官;外交家" },
+            { en: "decorate", zh: "装饰;装潢;装修" },
+            { en: "core", zh: "核心;核心;果核" },
+            { en: "ornament", zh: "装饰;装饰物;点缀" },
+            { en: "furnish", zh: "布置;装备;提供" },
+            { en: "spot", zh: "斑点;地点;发现" },
+            { en: "potential", zh: "潜在的;可能的;潜力" },
+            { en: "permanent", zh: "永久的;永恒的;持久的" },
+            { en: "perpetual", zh: "永久的;永恒的;不断的" },
+            { en: "permeate", zh: "渗透;弥漫;充满" },
+            { en: "penetrate", zh: "渗透;穿透;洞察" },
+            { en: "site", zh: "地点;位置;场所" },
+            { en: "cite", zh: "引用;引证;举例" },
+            { en: "quote", zh: "引用;引述;报价" }
+        ],
+        18: [
+            { en: "tense", zh: "时态;紧张的;拉紧的" },
+            { en: "intensive", zh: "密集的;强化的;精深的" },
+            { en: "intense", zh: "强烈的;紧张的;热情的" },
+            { en: "sense", zh: "感觉;感官;意义" },
+            { en: "sensitive", zh: "敏感的;灵敏的;易受影响的" },
+            { en: "senseless", zh: "无意义的;无知觉的;愚蠢的" },
+            { en: "sensible", zh: "明智的;明显的;感觉得到的" },
+            { en: "nonsense", zh: "胡说;废话;荒谬的" },
+            { en: "sensation", zh: "感觉;知觉;轰动" },
+            { en: "vague", zh: "模糊的;含糊的;不明确的" },
+            { en: "blur", zh: "模糊;污点;使模糊" },
+            { en: "obscure", zh: "模糊的;晦涩的;使暗淡" },
+            { en: "curious", zh: "好奇的;奇特的;古怪的" },
+            { en: "current", zh: "当前的;流通的;电流" },
+            { en: "accurate", zh: "准确的;精确的;正确的" },
+            { en: "secure", zh: "安全的;可靠的;保护" },
+            { en: "harm", zh: "伤害;损害;危害" },
+            { en: "impair", zh: "损害;削弱;损伤" },
+            { en: "injure", zh: "伤害;损害;损伤" },
+            { en: "injurious", zh: "有害的;诽谤的;伤害的" },
+            { en: "rescue", zh: "营救;救援;解救" },
+            { en: "particular", zh: "特别的;特定的;详细的" },
+            { en: "specialise", zh: "专门研究;专攻;专业化" },
+            { en: "specialist", zh: "专家;专科医生; specialist" },
+            { en: "speciality", zh: "专业;专长;特性" },
+            { en: "expert", zh: "专家;熟练的; expert" },
+            { en: "specific", zh: "特定的;具体的;明确的" },
+            { en: "peculiar", zh: "独特的;奇怪的;特殊的" },
+            { en: "eccentric", zh: "古怪的;反常的;怪人" },
+            { en: "odd", zh: "奇怪的;奇数的;古怪的" },
+            { en: "weird", zh: "奇怪的;怪异的;离奇的" },
+            { en: "queer", zh: "奇怪的;古怪的;同性恋的" },
+            { en: "exotic", zh: "异国的;外来的;奇异的" },
+            { en: "exquisite", zh: "精致的;精美的;细腻的" },
+            { en: "exile", zh: "流放;流亡;放逐" },
+            { en: "exchange", zh: "交换;交易;兑换" },
+            { en: "expedition", zh: "远征;探险;考察" },
+            { en: "explore", zh: "探索;探险;探究" },
+            { en: "exploit", zh: "开发;利用;剥削" },
+            { en: "explode", zh: "爆炸;爆发;激增" },
+            { en: "coordinate", zh: "协调;坐标;同等的" },
+            { en: "subordinate", zh: "下属;从属的;次要的" },
+            { en: "inferior", zh: "下级;差的;自卑的" },
+            { en: "superior", zh: "上级;优越的;上级" },
+            { en: "superb", zh: "极好的;华丽的;卓越的" },
+            { en: "supreme", zh: "最高的;至高的;极度的" },
+            { en: "superiority", zh: "优越;优势;优越性" },
+            { en: "superstition", zh: "迷信;迷信" },
+            { en: "religion", zh: "宗教;信仰;宗教信仰" },
+            { en: "regime", zh: "政权;政体;制度" }
+        ],
+        19: [
+            { en: "relate", zh: "联系;叙述;使有联系" },
+            { en: "relation", zh: "关系;联系;亲属" },
+            { en: "relationship", zh: "关系;联系;人际关系" },
+            { en: "correlate", zh: "相关;关联;使相互关联" },
+            { en: "relevant", zh: "相关的;切题的;有关的" },
+            { en: "regulate", zh: "调节;调整;规定" },
+            { en: "regular", zh: "定期的;规则的;普通的" },
+            { en: "frequent", zh: "频繁的;经常的;常去的" },
+            { en: "resort", zh: "求助;诉诸;度假胜地" },
+            { en: "sample", zh: "样本;样品;采样" },
+            { en: "specimen", zh: "样本;标本;样品" },
+            { en: "virus", zh: "病毒;病毒;病毒性疾病" },
+            { en: "bacteria", zh: "细菌;bacterium的复数" },
+            { en: "germ", zh: "细菌;微生物;胚芽" },
+            { en: "immune", zh: "免疫的;豁免的;免疫的" },
+            { en: "exempt", zh: "豁免;免除;被免除的" },
+            { en: "alcohol", zh: "酒精;乙醇;酒" },
+            { en: "drug", zh: "药物;毒品;药" },
+            { en: "physical", zh: "身体的;物理的;物质的" },
+            { en: "physician", zh: "医生;内科医生;医师" },
+            { en: "mental", zh: "精神的;脑力的;心理的" },
+            { en: "fundamental", zh: "基本的;根本的;基础" },
+            { en: "refund", zh: "退款;退还;归还" },
+            { en: "fatal", zh: "致命的;重大的;命中注定的" },
+            { en: "total", zh: "全部的;总共的;总数" },
+            { en: "digital", zh: "数字的;数码的;数字的" },
+            { en: "talent", zh: "天赋;才能;人才" },
+            { en: "elite", zh: "精英;精华;精英" },
+            { en: "vital", zh: "至关重要的;生命的;活力的" },
+            { en: "essential", zh: "必要的;基本的;要素" },
+            { en: "crucial", zh: "关键的;决定性的;重要的" },
+            { en: "indispensable", zh: "不可或缺的;必不可少的" },
+            { en: "inevitable", zh: "不可避免的;必然的" },
+            { en: "imperative", zh: "必要的;命令的;祈使的" },
+            { en: "decisive", zh: "决定性的;果断的;坚定的" },
+            { en: "ponder", zh: "沉思;考虑;衡量" },
+            { en: "ponderous", zh: "笨重的;沉重的;冗长的" },
+            { en: "clumsy", zh: "笨拙的;笨重的;笨拙的" },
+            { en: "respond", zh: "回应;回答;作出反应" },
+            { en: "responsible", zh: "负责的;有责任的;可靠的" },
+            { en: "correspond", zh: "符合;一致;通信" },
+            { en: "phase", zh: "阶段;时期;阶段" },
+            { en: "phrase", zh: "短语;词组;短语" },
+            { en: "spontaneous", zh: "自发的;自然的;本能的" },
+            { en: "sponsor", zh: "赞助;主办;赞助商" }
+        ],
+        20: [
+            { en: "feasible", zh: "可行的;可能的;可行的" },
+            { en: "likely", zh: "可能的;可能;大概" },
+            { en: "probable", zh: "可能的;大概;很可能的" },
+            { en: "reckon", zh: "认为;估计;计算" },
+            { en: "reckless", zh: "鲁莽的;不顾后果的;粗心的" },
+            { en: "check", zh: "检查;核对;检查" },
+            { en: "estimate", zh: "估计;估价;估计" },
+            { en: "intimate", zh: "亲密的;私人的;暗示" },
+            { en: "ultimate", zh: "最终的;终极的;根本的" },
+            { en: "approximate", zh: "近似的;大约;近似" },
+            { en: "climate", zh: "气候;风气;气候" },
+            { en: "surround", zh: "围绕;包围;环境" },
+            { en: "atmosphere", zh: "大气;气氛;氛围" },
+            { en: "mood", zh: "情绪;心情;语气" },
+            { en: "sentiment", zh: "情绪;感情;观点" },
+            { en: "temper", zh: "脾气;性情;回火" },
+            { en: "circumstance", zh: "情况;环境;情形" },
+            { en: "circulate", zh: "循环;传播;流通" },
+            { en: "ventilate", zh: "通风;通气;使通风" },
+            { en: "accumulate", zh: "积累;积聚;堆积" },
+            { en: "calculate", zh: "计算;核算;预测" },
+            { en: "calendar", zh: "日历;历法;日程表" },
+            { en: "algorithm", zh: "算法;算法;运算法则" }
+        ],
+        21: [
+        {en: "agriculture", zh: "n. 农业，农学"},
+        { en: "sow", zh: "v. 播种；传播" },
+        { en: "reap", zh: "v. 收割，收获；获得" },
+        { en: "ripe", zh: "adj. 成熟的；时机成熟的" },
+        { en: "irrigate", zh: "v. 灌溉" },
+        { en: "irritable", zh: "adj. 易怒的，急躁的" },
+        { en: "yield", zh: "v. 出产；屈服 n. 产量，收益" },
+        { en: "output", zh: "n. 产量；输出" },
+        { en: "outlook", zh: "n. 前景；观点；景色" },
+        { en: "insight", zh: "n. 洞察力，深刻见解" },
+        { en: "overlook", zh: "v. 忽视；俯瞰；宽容" },
+        { en: "overwhelm", zh: "v. 压倒；使不知所措；征服" },
+        { en: "wheel", zh: "n. 轮子 v. 转动" },
+        { en: "overtime", zh: "n./adv. 加班（的）" },
+        { en: "overcome", zh: "v. 克服，战胜" },
+        { en: "overflow", zh: "v./n. 溢出；泛滥" },
+        { en: "overthrow", zh: "v./n. 推翻，颠覆" },
+        { en: "overturn", zh: "v. 推翻；打翻" },
+        { en: "overnight", zh: "adv./adj. 一夜之间（的）" },
+        { en: "fortnight", zh: "n. 两星期" },
+        { en: "overall", zh: "adj. 全部的 adv. 总的来说" },
+        { en: "comprehensive", zh: "adj. 全面的，综合的" },
+        { en: "swing", zh: "v./n. 摇摆；秋千" },
+        { en: "sway", zh: "v./n. 摇摆；影响" },
+        { en: "swell", zh: "v. 肿胀；膨胀；增长" },
+        { en: "sweep", zh: "v. 打扫；席卷；掠过" },
+        { en: "swear", zh: "v. 发誓；咒骂" },
+        { en: "scream", zh: "v./n. 尖叫" },
+        { en: "scold", zh: "v. 责骂，训斥" },
+        { en: "scorn", zh: "n./v. 轻蔑，鄙视" },
+        { en: "scare", zh: "v./n. 惊吓，害怕" },
+        { en: "sprout", zh: "v. 发芽；长出 n. 新芽" },
+        { en: "spite", zh: "n. 恶意，怨恨" },
+        { en: "spray", zh: "v./n. 喷雾；喷洒" },
+        { en: "pray", zh: "v. 祈祷；恳求" },
+        { en: "prey", zh: "n. 猎物；受害者 v. 捕食" },
+        { en: "predator", zh: "n. 捕食者；掠夺者" },
+        { en: "array", zh: "n. 大量；阵列 v. 排列" },
+        { en: "sphere", zh: "n. 范围；领域；球体" },
+        { en: "spoil", zh: "v. 损坏；宠坏；变质" },
+        { en: "destroy", zh: "v. 破坏，摧毁" },
+        { en: "deteriorate", zh: "v. 恶化，变坏" },
+        { en: "poison", zh: "n. 毒药 v. 毒害" },
+        { en: "span", zh: "n. 跨度；一段时间 v. 跨越" },
+        { en: "scope", zh: "n. 范围；机会" },
+        { en: "realm", zh: "n. 领域；王国" },
+        { en: "field", zh: "n. 领域；田野；场地" },
+        { en: "vibrate", zh: "v. 振动，颤动" },
+        { en: "violent", zh: "adj. 暴力的；猛烈的" },
+        { en: "violate", zh: "v. 违反；侵犯" },
+        { en: "navigate", zh: "v. 导航；航行；应对" },
+        { en: "virtue", zh: "n. 美德；优点" },
+        { en: "merit", zh: "n. 优点；功绩 v. 值得" },
+        { en: "charity", zh: "n. 慈善；慈善机构" },
+        ],
+        22: [
+        { en: "retail", zh: "n./v./adj. 零售（的）" },
+        { en: "tail", zh: "n. 尾巴；尾部" },
+        { en: "wholesale", zh: "n./v./adj. 批发（的）" },
+        { en: "tailor", zh: "n. 裁缝 v. 定制；使适应" },
+        { en: "detail", zh: "n. 细节 v. 详述" },
+        { en: "entail", zh: "v. 使必需；牵涉" },
+        { en: "trade", zh: "n./v. 贸易；交易" },
+        { en: "commerce", zh: "n. 商业，贸易" },
+        { en: "stall", zh: "n. 摊位；货摊" },
+        { en: "commodity", zh: "n. 商品，日用品" },
+        { en: "merchant", zh: "n. 商人" },
+        { en: "merchandise", zh: "n. 商品 v. 推销" },
+        { en: "product", zh: "n. 产品；产物" },
+        { en: "productive", zh: "adj. 多产的；富有成效的" },
+        { en: "productivity", zh: "n. 生产力，生产率" },
+        { en: "reproduce", zh: "v. 繁殖；复制" },
+        { en: "duplicate", zh: "v. 复制；复印 adj. 复制的" },
+        { en: "triple", zh: "adj. 三倍的 v. 增至三倍" },
+        { en: "trivial", zh: "adj. 琐碎的，不重要的" },
+        { en: "trial", zh: "n. 试验；审判" },
+        { en: "companion", zh: "n. 同伴，伴侣" },
+        { en: "accompany", zh: "v. 陪伴；伴随" },
+        { en: "venture", zh: "n. 冒险；企业 v. 冒险" },
+        { en: "gamble", zh: "v./n. 赌博；冒险" },
+        { en: "hazard", zh: "n. 危险；危害 v. 冒险" },
+        { en: "stake", zh: "n. 赌注；利害关系 v. 打赌" },
+        { en: "trap", zh: "n. 陷阱；圈套 v. 困住" },
+        { en: "strap", zh: "n. 带子 v. 捆扎" },
+        { en: "appropriate", zh: "adj. 合适的 v. 挪用；占用" },
+        { en: "property", zh: "n. 财产；性质" },
+        { en: "ownership", zh: "n. 所有权" },
+        { en: "estate", zh: "n. 房地产；遗产" },
+        { en: "wealth", zh: "n. 财富；丰富" },
+        { en: "poverty", zh: "n. 贫穷" },
+        { en: "worthy", zh: "adj. 值得的；有价值的" },
+        { en: "worthwhile", zh: "adj. 值得做的" },
+        { en: "bless", zh: "v. 祝福；保佑" },
+        { en: "possess", zh: "v. 拥有；具有" },
+        { en: "asset", zh: "n. 资产；优点" },
+        { en: "upset", zh: "adj. 心烦的 v. 使心烦；打翻" },
+        { en: "settle", zh: "v. 解决；定居；沉淀" },
+        { en: "dwell", zh: "v. 居住；细想" },
+        { en: "dwelling", zh: "n. 住所，住宅" },
+        { en: "handle", zh: "v. 处理；操作 n. 把手" },
+        { en: "manage", zh: "v. 管理；设法做到" },
+        { en: "tackle", zh: "v. 处理；解决" },
+        { en: "cope", zh: "v. 应对，处理" },
+        { en: "solve", zh: "v. 解决，解答" },
+        { en: "resolve", zh: "v. 解决；决心；分解" },
+        { en: "dissolve", zh: "v. 溶解；解散" },
+        { en: "vibrate", zh: "v. 振动，颤动" },
+        { en: "violate", zh: "v. 违反；侵犯" },
+        { en: "navigate", zh: "v. 导航；航行；应对" },
+        { en: "virtue", zh: "n. 美德；优点" },
+        { en: "merit", zh: "n. 优点；功绩 v. 值得" },
+        { en: "charity", zh: "n. 慈善；慈善机构" },
+        ],
+        23: [
+        { en: "image", zh: "n. 形象；图像；印象" },
+        { en: "imagine", zh: "v. 想象；设想" },
+        { en: "mature", zh: "adj. 成熟的 v. 成熟" },
+        { en: "calm", zh: "adj. 平静的 v. 使平静" },
+        { en: "moral", zh: "adj. 道德的 n. 道德；寓意" },
+        { en: "mortal", zh: "adj. 凡人的；致命的 n. 凡人" },
+        { en: "ethnic", zh: "adj. 种族的；民族的" },
+        { en: "focus", zh: "v./n. 聚焦；焦点；中心" },
+        { en: "concentrate", zh: "v. 集中；专注" },
+        { en: "indulge", zh: "v. 沉溺于；纵容" },
+        { en: "addict", zh: "n. 瘾君子 v. 使上瘾" },
+        { en: "predict", zh: "v. 预测，预言" },
+        { en: "abdicate", zh: "v. 退位；放弃" },
+        { en: "dictate", zh: "v. 口述；命令；支配" },
+        { en: "contradict", zh: "v. 反驳；与… 矛盾" },
+        { en: "extinguish", zh: "v. 熄灭；消灭" },
+        { en: "extinct", zh: "adj. 灭绝的；熄灭的" },
+        { en: "distinguish", zh: "v. 区分；辨别" },
+        { en: "distinct", zh: "adj. 明显的；独特的" },
+        { en: "instinct", zh: "n. 本能；直觉" },
+        { en: "sting", zh: "v./n. 刺；刺痛" },
+        { en: "pierce", zh: "v. 刺穿；穿透" },
+        { en: "string", zh: "n. 线；弦；一串" },
+        { en: "rope", zh: "n. 绳子" },
+        { en: "intrude", zh: "v. 闯入；侵入" },
+        { en: "invade", zh: "v. 入侵；侵犯" },
+        { en: "evade", zh: "v. 逃避；规避" },
+        { en: "intrinsic", zh: "adj. 内在的，本质的" },
+        { en: "extrinsic", zh: "adj. 外在的，外部的" },
+        { en: "internal", zh: "adj. 内部的；国内的" },
+        { en: "external", zh: "adj. 外部的；国外的" },
+        { en: "interior", zh: "adj./n. 内部（的）；内地" },
+        { en: "exterior", zh: "adj./n. 外部（的）；外表" },
+        { en: "hike", zh: "n./v. 远足；徒步旅行；涨价" },
+        { en: "vacation", zh: "n. 假期 v. 度假" },
+        { en: "vocation", zh: "n. 职业；天职" },
+        { en: "excursion", zh: "n. 短途旅行" },
+        { en: "occasion", zh: "n. 场合；时机" },
+        { en: "opportunity", zh: "n. 机会，时机" },
+        { en: "diagnose", zh: "v. 诊断；判断" },
+        { en: "clinic", zh: "n. 诊所" },
+        { en: "picnic", zh: "n./v. 野餐" },
+        { en: "severe", zh: "adj. 严重的；严厉的" },
+        { en: "acute", zh: "adj. 急性的；严重的；敏锐的" },
+        { en: "terminal", zh: "adj. 晚期的；终点的 n. 终端" },
+        { en: "chronic", zh: "adj. 慢性的；长期的" },
+        { en: "surgery", zh: "n. 外科手术；外科" },
+        { en: "surgeon", zh: "n. 外科医生" },
+        { en: "therapy", zh: "n. 治疗，疗法" },
+        { en: "remedy", zh: "n. 疗法；补救办法 v. 补救" },
+        { en: "heal", zh: "v. 治愈；愈合" },
+        { en: "recovery", zh: "n. 恢复；痊愈" },
+        { en: "revive", zh: "v. 复兴；复活；苏醒" },
+        { en: "vivid", zh: "adj. 生动的；鲜明的" },
+        { en: "survive", zh: "v. 幸存；存活" },
+        { en: "discover", zh: "v. 发现；发觉" },
+        ],
+        24: [
+        { en: "understanding", zh: "n. 理解；谅解 adj. 善解人意的" },
+        { en: "grasp", zh: "v./n. 抓住；理解" },
+        { en: "grip", zh: "v./n. 紧握；控制" },
+        { en: "grab", zh: "v./n. 抓住；抢夺" },
+        { en: "stain", zh: "n. 污点 v. 玷污" },
+        { en: "strain", zh: "n. 压力；张力 v. 拉紧；劳损" },
+        { en: "restrain", zh: "v. 抑制；约束" },
+        { en: "constrain", zh: "v. 强迫；约束" },
+        { en: "refrain", zh: "v. 克制；避免" },
+        { en: "hinder", zh: "v. 阻碍，妨碍" },
+        { en: "inhibit", zh: "v. 抑制；阻止" },
+        { en: "obstruct", zh: "v. 阻塞；阻碍" },
+        { en: "obstacle", zh: "n. 障碍，阻碍" },
+        { en: "block", zh: "v. 堵塞；阻止 n. 块；街区" },
+        { en: "hamper", zh: "v. 妨碍；束缚" },
+        { en: "hammer", zh: "n. 锤子 v. 锤打" },
+        { en: "nail", zh: "n. 钉子；指甲 v. 钉" },
+        { en: "mercy", zh: "n. 仁慈；怜悯" },
+        { en: "sympathy", zh: "n. 同情；赞同" },
+        { en: "sympathetic", zh: "adj. 同情的；赞同的" },
+        { en: "pathetic", zh: "adj. 可怜的；可悲的" },
+        { en: "symbol", zh: "n. 象征；符号" },
+        { en: "resemble", zh: "v. 像，类似于" },
+        { en: "assemble", zh: "v. 集合；组装" },
+        { en: "symptom", zh: "n. 症状；征兆" },
+        { en: "atom", zh: "n. 原子" },
+        { en: "electron", zh: "n. 电子" },
+        { en: "nuclear", zh: "adj. 核的；原子核的" },
+        { en: "pollute", zh: "v. 污染；玷污" },
+        { en: "contaminate", zh: "v. 污染；弄脏" },
+        { en: "rear", zh: "v. 抚养；饲养 adj. 后面的" },
+        { en: "cultivate", zh: "v. 培养；耕作" },
+        { en: "breed", zh: "v. 繁殖；饲养；培育" },
+        { en: "feed", zh: "v. 喂养；进食" },
+        { en: "poster", zh: "n. 海报" },
+        { en: "nourish", zh: "v. 滋养；养育" },
+        { en: "flourish", zh: "v. 繁荣；兴旺" },
+        { en: "flour", zh: "n. 面粉" },
+        { en: "powder", zh: "n. 粉末" },
+        { en: "feedback", zh: "n. 反馈" },
+        { en: "nurture", zh: "v./n. 养育；培养" },
+        { en: "nutrition", zh: "n. 营养" },
+        { en: "nuisance", zh: "n. 讨厌的人 / 事" },
+        { en: "nutrient", zh: "n. 营养物 adj. 营养的" },
+        ],
+        25: [
+        { en: "fantasy", zh: "n. 幻想；空想" },
+        { en: "illusion", zh: "n. 错觉；幻想" },
+        { en: "illuminate", zh: "v. 照亮；阐明" },
+        { en: "fancy", zh: "v. 想象；喜欢 adj. 精致的" },
+        { en: "dignity", zh: "n. 尊严；高贵" },
+        { en: "dig", zh: "v. 挖；挖掘" },
+        { en: "indignant", zh: "adj. 愤慨的，愤怒的" },
+        { en: "rage", zh: "n. 愤怒 v. 发怒" },
+        { en: "outrage", zh: "n. 暴行；愤怒 v. 激怒" },
+        { en: "vicious", zh: "adj. 恶毒的；凶猛的" },
+        { en: "evil", zh: "adj. 邪恶的 n. 邪恶" },
+        { en: "brutal", zh: "adj. 残忍的；野蛮的" },
+        { en: "bruise", zh: "n./v. 瘀伤；擦伤" },
+        { en: "shrewd", zh: "adj. 精明的；敏锐的" },
+        { en: "cunning", zh: "adj. 狡猾的 n. 狡猾" },
+        { en: "diligent", zh: "adj. 勤奋的" },
+        { en: "hospitable", zh: "adj. 好客的；热情的" },
+        { en: "radical", zh: "adj. 激进的；根本的" },
+        { en: "racial", zh: "adj. 种族的" },
+        { en: "ethnic", zh: "adj. 种族的；民族的" },
+        { en: "fragment", zh: "n. 碎片 v. 破碎" },
+        { en: "fragile", zh: "adj. 易碎的；脆弱的" },
+        { en: "fraction", zh: "n. 分数；小部分" },
+        { en: "friction", zh: "n. 摩擦；矛盾" },
+        { en: "conflict", zh: "n./v. 冲突；矛盾" },
+        { en: "collide", zh: "v. 碰撞；冲突" },
+        { en: "clash", zh: "n./v. 冲突；碰撞" },
+        { en: "crash", zh: "n./v. 碰撞；坠毁" },
+        { en: "smash", zh: "v./n. 打碎；粉碎" },
+        { en: "harmony", zh: "n. 和谐；融洽" },
+        { en: "practically", zh: "adv. 实际上；几乎" },
+        { en: "virtual", zh: "adj. 虚拟的；实际上的" },
+        { en: "reality", zh: "n. 现实；实际" },
+        { en: "theory", zh: "n. 理论；学说" },
+        { en: "fake", zh: "adj. 假的 v. 伪造" },
+        { en: "authentic", zh: "adj. 真实的；正宗的" },
+        { en: "author", zh: "n. 作者；创始人" },
+        { en: "authority", zh: "n. 权威；当局" },
+        { en: "genuine", zh: "adj. 真正的；真诚的" },
+        { en: "genius", zh: "n. 天才；天赋" },
+        { en: "ingenious", zh: "adj. 巧妙的；有独创性的" },
+        { en: "forge", zh: "v. 锻造；伪造" },
+        { en: "mortgage", zh: "n./v. 抵押" },
+        { en: "vulgar", zh: "adj. 粗俗的；庸俗的" },
+        { en: "crude", zh: "adj. 粗糙的；天然的；粗俗的" },
+        { en: "raw", zh: "adj. 生的；未加工的；原始的" },
+        { en: "gesture", zh: "n. 手势；姿态 v. 做手势" },
+        ],
+        26: [
+        { en: "cognitive", zh: "adj. 认知的" },
+        { en: "recognise", zh: "v. 认出；承认；意识到" },
+        { en: "identity", zh: "n. 身份；同一性" },
+        { en: "identical", zh: "adj. 相同的；同一的" },
+        { en: "dentist", zh: "n. 牙医" },
+        { en: "compound", zh: "n. 化合物；复合物 adj. 复合的" },
+        { en: "hybrid", zh: "n. 杂交种；混合体" },
+        { en: "complex", zh: "adj. 复杂的 n. 综合体" },
+        { en: "complicate", zh: "v. 使复杂化" },
+        { en: "perplex", zh: "v. 使困惑，使费解" },
+        { en: "puzzle", zh: "v. 使困惑 n. 谜题；困惑" },
+        { en: "complain", zh: "v. 抱怨；投诉" },
+        { en: "groan", zh: "v./n. 呻吟；抱怨" },
+        { en: "gross", zh: "adj. 总的；毛的；粗俗的" },
+        { en: "moan", zh: "v./n. 呻吟；抱怨" },
+        { en: "mourn", zh: "v. 哀悼；悼念" },
+        { en: "confuse", zh: "v. 使困惑；混淆" },
+        { en: "refuse", zh: "v. 拒绝 n. 垃圾" },
+        { en: "diffuse", zh: "v. 扩散；传播 adj. 弥漫的" },
+        { en: "fluent", zh: "adj. 流利的；流畅的" },
+        { en: "affluent", zh: "adj. 富裕的" },
+        { en: "mislead", zh: "v. 误导；引入歧途" },
+        { en: "misfortune", zh: "n. 不幸；灾祸" },
+        { en: "fortune", zh: "n. 财富；运气" },
+        { en: "mischief", zh: "n. 恶作剧；伤害" },
+        { en: "discard", zh: "v. 丢弃；抛弃" },
+        { en: "discharge", zh: "v. 释放；解雇；排放" },
+        { en: "charge", zh: "v. 充电；收费；指控 n. 费用；指控" },
+        { en: "disgust", zh: "n./v. 厌恶，反感" },
+        { en: "digest", zh: "v. 消化；理解 n. 摘要" },
+        { en: "summary", zh: "n. 摘要，总结" },
+        { en: "sum", zh: "n. 总数；金额 v. 总结" },
+        { en: "summon", zh: "v. 召唤；召集" },
+        { en: "abandon", zh: "v. 抛弃；放弃" },
+        { en: "abolish", zh: "v. 废除，废止" },
+        { en: "abuse", zh: "v./n. 滥用；虐待；辱骂" },
+        { en: "abnormal", zh: "adj. 反常的，异常的" },
+        { en: "norm", zh: "n. 规范；标准" },
+        { en: "formal", zh: "adj. 正式的；形式的" },
+        { en: "formation", zh: "n. 形成；编队" },
+        { en: "conform", zh: "v. 符合；遵守" },
+        { en: "reform", zh: "v./n. 改革，改良" },
+        { en: "uniform", zh: "adj. 统一的 n. 制服" },
+        { en: "transform", zh: "v. 改变；转化" },
+        { en: "perform", zh: "v. 执行；表演" },
+        { en: "inform", zh: "v. 通知；告知" },
+        { en: "formulate", zh: "v. 制定；阐述" },
+        ],
+        27: [
+        { en: "confirm", zh: "v. 确认；证实" },
+        { en: "firm", zh: "adj. 坚定的；牢固的 n. 公司" },
+        { en: "inform", zh: "v. 通知；告知" },
+        { en: "affirm", zh: "v. 肯定；断言" },
+        { en: "allege", zh: "v. 宣称，断言" },
+        { en: "pledge", zh: "v./n. 保证；承诺" },
+        { en: "assure", zh: "v. 保证；使确信" },
+        { en: "ensure", zh: "v. 确保，保证" },
+        { en: "guarantee", zh: "v./n. 保证；担保" },
+        { en: "insure", zh: "v. 给… 保险；确保" },
+        { en: "premium", zh: "n. 保险费；奖金" },
+        { en: "architecture", zh: "n. 建筑学；建筑风格" },
+        { en: "architect", zh: "n. 建筑师；设计师" },
+        { en: "infrastructure", zh: "n. 基础设施" },
+        { en: "structure", zh: "n. 结构；建筑物 v. 构建" },
+        { en: "sculpture", zh: "n. 雕塑" },
+        { en: "construction", zh: "n. 建造；建筑" },
+        { en: "instruction", zh: "n. 指令；说明；教导" },
+        { en: "convince", zh: "v. 说服；使确信" },
+        { en: "convenience", zh: "n. 便利；方便" },
+        { en: "facility", zh: "n. 设施；设备" },
+        { en: "facilitate", zh: "v. 促进；使便利" },
+        { en: "manufacture", zh: "v./n. 制造；生产" },
+        { en: "manual", zh: "adj. 手工的；手动的 n. 手册" },
+        { en: "handy", zh: "adj. 方便的；手边的" },
+        { en: "manipulate", zh: "v. 操纵；操作" },
+        { en: "artifact", zh: "n. 人工制品" },
+        { en: "defect", zh: "n. 缺陷；缺点" },
+        { en: "effect", zh: "n. 效果；影响 v. 产生" },
+        { en: "affect", zh: "v. 影响；使感动" },
+        { en: "affection", zh: "n. 喜爱；感情" },
+        { en: "infect", zh: "v. 感染；传染" },
+        { en: "perfect", zh: "adj. 完美的 v. 使完美" },
+        { en: "utilise", zh: "v. 利用，使用" },
+        { en: "utility", zh: "n. 效用；公用事业" },
+        { en: "advantage", zh: "n. 优势；好处" },
+        { en: "drawback", zh: "n. 缺点，弊端" },
+        { en: "handicap", zh: "n. 障碍；缺陷 v. 妨碍" },
+        { en: "flaw", zh: "n. 瑕疵；缺陷" },
+        { en: "shortcoming", zh: "n. 缺点，短处" },
+        { en: "shortcut", zh: "n. 捷径" },
+        { en: "error", zh: "n. 错误；差错" },
+        { en: "fault", zh: "n. 故障；过错" },
+        { en: "default", zh: "n./v. 违约；默认" },
+        { en: "surge", zh: "v./n. 激增；汹涌" },
+        { en: "emerge", zh: "v. 出现；浮现" },
+        { en: "merger", zh: "n. 合并；兼并" },
+        { en: "submerge", zh: "v. 淹没；沉浸" },
+        { en: "emergency", zh: "n. 紧急情况；突发事件" },
+        { en: "crisis", zh: "n. 危机；关键时刻" },
+        ],
+        28: [
+        { en: "appearance", zh: "n. 出现；外貌" },
+        { en: "disappear", zh: "v. 消失；不见" },
+        { en: "evaporate", zh: "v. 蒸发；消失" },
+        { en: "vanish", zh: "v. 消失；突然不见" },
+        { en: "perish", zh: "v. 灭亡；腐烂" },
+        { en: "wrap", zh: "v. 包裹；缠绕" },
+        { en: "parcel", zh: "n. 包裹 v. 打包" },
+        { en: "package", zh: "n. 包裹；包装 v. 包装" },
+        { en: "inflation", zh: "n. 通货膨胀" },
+        { en: "shrink", zh: "v. 收缩；缩小" },
+        { en: "fade", zh: "v. 褪色；逐渐消失" },
+        { en: "finance", zh: "n. 财政；金融 v. 资助" },
+        { en: "monetary", zh: "adj. 货币的；金融的" },
+        { en: "loan", zh: "n./v. 贷款；借出" },
+        { en: "deposit", zh: "n. 存款；押金 v. 存放" },
+        { en: "budget", zh: "n. 预算 v. 做预算" },
+        { en: "target", zh: "n. 目标；靶子 v. 瞄准" },
+        { en: "aim", zh: "n./v. 目标；瞄准" },
+        { en: "purpose", zh: "n. 目的；用途" },
+        { en: "goal", zh: "n. 目标；球门" },
+        { en: "economy", zh: "n. 经济；节约" },
+        { en: "economical", zh: "adj. 经济的；节约的" },
+        { en: "economics", zh: "n. 经济学" },
+        { en: "thrift", zh: "n. 节俭；节约" },
+        { en: "autonomy", zh: "n. 自治；自主权" },
+        { en: "balance", zh: "n. 平衡；余额 v. 平衡" },
+        { en: "parallel", zh: "adj. 平行的；类似的 n. 平行线" },
+        { en: "paralyse", zh: "v. 使瘫痪；使无力" },
+        { en: "parade", zh: "n./v. 游行；炫耀" },
+        { en: "paradox", zh: "n. 悖论；矛盾" },
+        { en: "paradise", zh: "n. 天堂" },
+        { en: "paramount", zh: "adj. 最重要的；至高无上的" },
+        { en: "amount", zh: "n. 数量 v. 总计" },
+        { en: "quantity", zh: "n. 数量；量" },
+        { en: "utmost", zh: "adj. 极度的 n. 极限" },
+        { en: "mostly", zh: "adv. 主要地；通常" },
+        { en: "shelter", zh: "n. 庇护所；遮蔽 v. 庇护" },
+        { en: "reside", zh: "v. 居住；定居" },
+        { en: "resident", zh: "n. 居民 adj. 居住的" },
+        { en: "preside", zh: "v. 主持；掌管" },
+        { en: "inhabit", zh: "v. 居住于；栖息于" },
+        { en: "habitat", zh: "n. 栖息地" },
+        { en: "civil", zh: "adj. 公民的；民用的" },
+        { en: "citizen", zh: "n. 公民；市民" },
+        { en: "downtown", zh: "adv./adj./n. 市中心（的）" },
+        { en: "urban", zh: "adj. 城市的" },
+        { en: "suburb", zh: "n. 郊区" },
+        { en: "rural", zh: "adj. 农村的；乡村的" },
+        { en: "metropolis", zh: "n. 大都市" },
+        { en: "local", zh: "adj. 当地的；本地的" },
+        { en: "locate", zh: "v. 定位；位于" },
+        { en: "allocate", zh: "v. 分配；拨出" },
+        { en: "continent", zh: "n. 大陆；洲" },
+        { en: "federal", zh: "adj. 联邦的" },
+        { en: "grave", zh: "adj. 严重的；严肃的 n. 坟墓" },
+        { en: "aggravate", zh: "v. 加重；恶化" },
+        { en: "grind", zh: "v. 磨碎；折磨" },
+        { en: "grieve", zh: "v. 悲伤；哀悼" },
+        { en: "relieve", zh: "v. 减轻；缓解；解除" },
+        { en: "alleviate", zh: "v. 减轻；缓和" },
+        { en: "ease", zh: "v. 减轻；缓解 n. 容易" },
+        { en: "grateful", zh: "adj. 感激的" },
+        { en: "grant", zh: "v. 授予；允许 n. 补助金" },
+        { en: "contact", zh: "v./n. 接触；联系" },
+        { en: "intact", zh: "adj. 完整的；未受损伤的" },
+        { en: "tangible", zh: "adj. 有形的；切实的" },
+        { en: "attach", zh: "v. 附加；系上" },
+        { en: "detach", zh: "v. 分离；拆开" },
+        { en: "adhere", zh: "v. 坚持；粘附" },
+        { en: "cling", zh: "v. 紧贴；坚持" },
+        { en: "coherent", zh: "adj. 连贯的；一致的" },
+        { en: "stick", zh: "v. 粘贴；坚持；刺" },
+        ],
+        29: [
+        { en: "donate", zh: "v. 捐赠；捐献" },
+        { en: "contribute", zh: "v. 贡献；促成；投稿" },
+        { en: "attribute", zh: "v. 归因于 n. 属性" },
+        { en: "distribute", zh: "v. 分配；分发；分布" },
+        { en: "retribution", zh: "n. 惩罚；报应" },
+        { en: "reply", zh: "v./n. 回答；回复" },
+        { en: "record", zh: "v./n. 记录；唱片" },
+        { en: "document", zh: "n. 文件；文档 v. 记录" },
+        { en: "documentary", zh: "adj. 纪实的 n. 纪录片" },
+        { en: "accord", zh: "v. 符合；一致 n. 协议" },
+        { en: "accordingly", zh: "adv. 因此；相应地" },
+        { en: "regard", zh: "v. 认为；看待 n. 关心" },
+        { en: "recommend", zh: "v. 推荐；建议" },
+        { en: "receipt", zh: "n. 收据；收到" },
+        { en: "recipe", zh: "n. 食谱；方法" },
+        { en: "reciprocal", zh: "adj. 相互的；互惠的" },
+        { en: "aware", zh: "adj. 意识到的；知道的" },
+        { en: "conscious", zh: "adj. 有意识的；清醒的" },
+        { en: "conscience", zh: "n. 良心；道德心" },
+        { en: "adore", zh: "v. 崇拜；喜爱" },
+        { en: "worship", zh: "v./n. 崇拜；敬奉" },
+        { en: "admire", zh: "v. 钦佩；赞美" },
+        { en: "abstract", zh: "adj. 抽象的 n. 摘要" },
+        { en: "tractor", zh: "n. 拖拉机" },
+        { en: "subtract", zh: "v. 减去；扣除" },
+        { en: "extract", zh: "v. 提取；摘录 n. 摘录" },
+        { en: "contract", zh: "n. 合同 v. 收缩；签约" },
+        { en: "attract", zh: "v. 吸引；引起" },
+        { en: "distract", zh: "v. 转移；使分心" },
+        { en: "academic", zh: "adj. 学术的；学院的" },
+        { en: "academy", zh: "n. 学院；研究院" },
+        { en: "epidemic", zh: "adj. 流行的 n. 流行病" },
+        { en: "faculty", zh: "n. 全体教员；能力" },
+        { en: "punctual", zh: "adj. 准时的" },
+        { en: "scholar", zh: "n. 学者" },
+        { en: "tutor", zh: "n. 导师；家庭教师 v. 辅导" },
+        { en: "tuition", zh: "n. 学费；教学" },
+        { en: "notion", zh: "n. 概念；观念" },
+        { en: "concept", zh: "n. 概念；观念" },
+        { en: "forum", zh: "n. 论坛；讨论会" },
+        { en: "panel", zh: "n. 面板；专家组" },
+        { en: "board", zh: "n. 板；董事会；委员会" },
+        { en: "aboard", zh: "adv./prep. 在船 / 飞机 / 车上" },
+        { en: "abroad", zh: "adv. 在国外；到国外" },
+        { en: "seminar", zh: "n. 研讨会；讨论会" },
+        { en: "curriculum", zh: "n. 课程" },
+        { en: "semester", zh: "n. 学期" },
+        ],
+        30: [
+        { en: "tempt", zh: "v. 诱惑；引诱" },
+        { en: "attempt", zh: "v./n. 尝试；企图" },
+        { en: "endeavour", zh: "v./n. 努力；尽力" },
+        { en: "sweat", zh: "n. 汗水 v. 出汗" },
+        { en: "contempt", zh: "n. 轻视；蔑视" },
+        { en: "contemplate", zh: "v. 沉思；考虑" },
+        { en: "lure", zh: "v./n. 诱惑；引诱" },
+        { en: "reluctant", zh: "adj. 不情愿的；勉强的" },
+        { en: "readily", zh: "adv. 乐意地；容易地" },
+        { en: "volunteer", zh: "n. 志愿者 v. 自愿" },
+        { en: "consequently", zh: "adv. 因此；结果" },
+        { en: "vain", zh: "adj. 徒劳的；自负的" },
+        { en: "sequence", zh: "n. 序列；顺序" },
+        { en: "subsequent", zh: "adj. 随后的；后来的" },
+        { en: "serial", zh: "adj. 连续的；连载的" },
+        { en: "series", zh: "n. 系列；连续" },
+        { en: "episode", zh: "n. 插曲；一集" },
+        { en: "counter", zh: "n. 柜台；计数器 v. 反驳" },
+        { en: "account", zh: "n. 账户；解释 v. 解释；认为" },
+        { en: "accountant", zh: "n. 会计" },
+        { en: "counterpart", zh: "n. 对应物；职位相当的人" },
+        { en: "contrary", zh: "adj. 相反的 n. 相反" },
+        { en: "encounter", zh: "v./n. 遭遇；遇到" },
+        { en: "discount", zh: "n./v. 折扣；打折" },
+        { en: "compete", zh: "v. 竞争；比赛" },
+        { en: "competition", zh: "n. 竞争；比赛" },
+        { en: "competitive", zh: "adj. 竞争的；有竞争力的" },
+        { en: "competent", zh: "adj. 有能力的；能胜任的" },
+        { en: "versus", zh: "prep. 对；对抗" },
+        { en: "confine", zh: "v. 限制；禁闭" },
+        { en: "refine", zh: "v. 精炼；改进" },
+        { en: "define", zh: "v. 定义；规定" },
+        { en: "definite", zh: "adj. 明确的；一定的" },
+        { en: "infinite", zh: "adj. 无限的；无穷的" },
+        { en: "limited", zh: "adj. 有限的" },
+        { en: "preliminary", zh: "adj. 初步的；预备的" },
+        { en: "eliminate", zh: "v. 消除；淘汰" },
+        { en: "restrict", zh: "v. 限制；约束" },
+        { en: "restrictive", zh: "adj. 限制的；约束的" },
+        { en: "rigorous", zh: "adj. 严格的；严密的" },
+        { en: "rigid", zh: "adj. 僵硬的；严格的" },
+        { en: "stern", zh: "adj. 严厉的；坚定的" },
+        { en: "constant", zh: "adj. 不断的；恒定的" },
+        { en: "instant", zh: "adj. 立即的；即时的 n. 瞬间" },
+        { en: "instantaneous", zh: "adj. 瞬间的；即时的" },
+        { en: "distant", zh: "adj. 遥远的；疏远的" },
+        { en: "withstand", zh: "v. 承受；抵抗" },
+        { en: "withhold", zh: "v. 扣留；隐瞒" },
+        { en: "substance", zh: "n. 物质；实质" },
+        ],
+        31: [
+        { en: "steady", zh: "adj. 稳定的；稳固的 v. 使稳定" },
+        { en: "stable", zh: "adj. 稳定的；牢固的 n. 马厩" },
+        { en: "establish", zh: "v. 建立；确立" },
+        { en: "stadium", zh: "n. 体育场" },
+        { en: "audience", zh: "n. 观众；听众" },
+        { en: "auditorium", zh: "n. 礼堂；观众席" },
+        { en: "census", zh: "n. 人口普查" },
+        { en: "consensus", zh: "n. 共识；一致意见" },
+        { en: "compromise", zh: "n./v. 妥协；折中" },
+        { en: "comprise", zh: "v. 包含；由… 组成" },
+        { en: "premise", zh: "n. 前提；假设" },
+        { en: "operate", zh: "v. 操作；运转；动手术" },
+        { en: "cooperate", zh: "v. 合作；协作" },
+        { en: "corporation", zh: "n. 公司；法人" },
+        { en: "collaborate", zh: "v. 合作；协作" },
+        { en: "elaborate", zh: "v. 详细阐述 adj. 精心制作的" },
+        { en: "dose", zh: "n. 剂量；一剂" },
+        { en: "suppose", zh: "v. 假设；认为" },
+        { en: "expose", zh: "v. 暴露；揭露" },
+        { en: "posture", zh: "n. 姿势；态度 v. 摆姿势" },
+        { en: "dispose", zh: "v. 处理；处置" },
+        { en: "rid", zh: "v. 使摆脱；去掉" },
+        { en: "deposit", zh: "n. 存款；押金 v. 存放" },
+        { en: "propose", zh: "v. 提议；建议；求婚" },
+        { en: "compose", zh: "v. 组成；创作" },
+        { en: "positive", zh: "adj. 积极的；肯定的；阳性的" },
+        { en: "oppose", zh: "v. 反对；对抗" },
+        { en: "opponent", zh: "n. 对手；反对者" },
+        { en: "rival", zh: "n. 对手 v. 竞争" },
+        { en: "impose", zh: "v. 强加；征收" },
+        { en: "levy", zh: "v./n. 征收；征税" },
+        { en: "envy", zh: "n./v. 羡慕；嫉妒" },
+        { en: "jealous", zh: "adj. 嫉妒的；吃醋的" },
+        { en: "devise", zh: "v. 设计；发明" },
+        { en: "visible", zh: "adj. 可见的；明显的" },
+        { en: "revise", zh: "v. 修订；修改" },
+        { en: "vision", zh: "n. 视力；视野；愿景" },
+        { en: "view", zh: "n. 观点；景色 v. 看待" },
+        { en: "review", zh: "v./n. 回顾；复习；评论" },
+        { en: "viewpoint", zh: "n. 观点；看法" },
+        { en: "standpoint", zh: "n. 立场；观点" },
+        { en: "angle", zh: "n. 角度；观点" },
+        { en: "element", zh: "n. 元素；要素" },
+        { en: "factor", zh: "n. 因素；要素" },
+        { en: "ingredient", zh: "n. 成分；原料" },
+        { en: "prejudice", zh: "n./v. 偏见；成见" },
+        { en: "bias", zh: "n./v. 偏见；偏心" },
+        { en: "neutral", zh: "adj. 中立的；中性的" },
+        { en: "independent", zh: "adj. 独立的；自主的" },
+        { en: "partial", zh: "adj. 部分的；偏袒的" },
+        ],
+        32: [
+        { en: "apart", zh: "adv. 分开；相距" },
+        { en: "particle", zh: "n. 粒子；微粒" },
+        { en: "partner", zh: "n. 伙伴；合伙人 v. 合作" },
+        { en: "depart", zh: "v. 离开；出发" },
+        { en: "impart", zh: "v. 传授；给予" },
+        { en: "department", zh: "n. 部门；系" },
+        { en: "apartment", zh: "n. 公寓" },
+        { en: "supervise", zh: "v. 监督；管理" },
+        { en: "custody", zh: "n. 监护；拘留" },
+        { en: "visualise", zh: "v. 想象；使可视化" },
+        { en: "visual", zh: "adj. 视觉的；视力的" },
+        { en: "envisage", zh: "v. 设想；想象" },
+        { en: "confront", zh: "v. 面对；遭遇" },
+        { en: "press", zh: "v. 按；压；催促 n. 新闻界" },
+        { en: "depress", zh: "v. 使沮丧；使萧条" },
+        { en: "burden", zh: "n. 负担 v. 使负担" },
+        { en: "express", zh: "v. 表达；表示 adj. 特快的" },
+        { en: "impress", zh: "v. 给… 留下印象" },
+        { en: "compress", zh: "v. 压缩；压紧" },
+        { en: "repress", zh: "v. 抑制；镇压" },
+        { en: "suppress", zh: "v. 镇压；抑制" },
+        { en: "oppress", zh: "v. 压迫；压制" },
+        { en: "exclude", zh: "v. 排除；排斥" },
+        { en: "include", zh: "v. 包含；包括" },
+        { en: "preclude", zh: "v. 排除；阻止" },
+        { en: "conclude", zh: "v. 结束；推断；缔结" },
+        { en: "lease", zh: "n./v. 租约；出租" },
+        { en: "halt", zh: "v./n. 停止；暂停" },
+        { en: "suspend", zh: "v. 暂停；悬挂" },
+        { en: "expire", zh: "v. 到期；期满；失效" },
+        { en: "inspire", zh: "v. 鼓舞；激发" },
+        { en: "inspiration", zh: "n. 灵感；鼓舞" },
+        { en: "aspire", zh: "v. 渴望；追求" },
+        { en: "perspire", zh: "v. 出汗；流汗" },
+        { en: "approach", zh: "v./n. 接近；方法" },
+        { en: "access", zh: "n. 通道；使用权 v. 访问" },
+        { en: "accessible", zh: "adj. 可接近的；易得到的" },
+        { en: "assess", zh: "v. 评估；评价" },
+        { en: "obsess", zh: "v. 使痴迷；使困扰" },
+        { en: "profile", zh: "n. 侧面；轮廓；简介" },
+        { en: "propel", zh: "v. 推进；推动" },
+        { en: "compel", zh: "v. 强迫；迫使" },
+        { en: "proceed", zh: "v. 继续；进行" },
+        { en: "excess", zh: "n. 过量；过剩 adj. 过量的" },
+        { en: "ascend", zh: "v. 上升；攀登" },
+        { en: "descend", zh: "v. 下降；降临" },
+        { en: "descendant", zh: "n. 后代；子孙" },
+        { en: "offspring", zh: "n. 后代；子孙" },
+        { en: "transcend", zh: "v. 超越；胜过" },
+        { en: "accelerate", zh: "v. 加速；促进" },
+        { en: "precede", zh: "v. 在… 之前；先于" },
+        { en: "precedent", zh: "n. 先例；前例" },
+        { en: "procession", zh: "n. 队伍；行列" },
+        { en: "procedure", zh: "n. 程序；步骤" },
+        { en: "process", zh: "n. 过程；进程 v. 加工" },
+        { en: "predecessor", zh: "n. 前任；前辈" },
+        { en: "ancestor", zh: "n. 祖先；先驱" },
+        { en: "succession", zh: "n. 连续；继承" },
+        { en: "successor", zh: "n. 继任者；继承人" },
+        { en: "concede", zh: "v. 承认；让步" },
+        { en: "exceed", zh: "v. 超过；胜过" },
+        { en: "recession", zh: "n. 衰退；不景气" },
+        { en: "altitude", zh: "n. 海拔；高度" },
+        { en: "latitude", zh: "n. 纬度；自由" },
+        { en: "aggressive", zh: "adj. 侵略性的；积极的" },
+        { en: "progress", zh: "n./v. 进步；进展" },
+        { en: "congress", zh: "n. 国会；代表大会" },
+        { en: "parliament", zh: "n. 议会；国会" },
+        { en: "senator", zh: "n. 参议员" },
+        { en: "council", zh: "n. 委员会；理事会" },
+        { en: "sector", zh: "n. 部门；领域" },
+        { en: "bureau", zh: "n. 局；办事处" },
+        { en: "headquarters", zh: "n. 总部；司令部" },
+        { en: "session", zh: "n. 会议；学期" },
+        { en: "minister", zh: "n. 部长；大臣" },
+        { en: "administer", zh: "v. 管理；执行" },
+        { en: "delegate", zh: "n. 代表 v. 委派" },
+        ],
+        33: [
+        { en: "evaluate", zh: "v. 评价；评估" },
+        { en: "valuable", zh: "adj. 有价值的；宝贵的" },
+        { en: "devalue", zh: "v. 贬值；降低价值" },
+        { en: "undervalue", zh: "v. 低估；看轻" },
+        { en: "precious", zh: "adj. 珍贵的；宝贵的" },
+        { en: "appreciate", zh: "v. 欣赏；感激；增值" },
+        { en: "treasure", zh: "n. 财富；珍宝 v. 珍惜" },
+        { en: "expend", zh: "v. 花费；消耗" },
+        { en: "costly", zh: "adj. 昂贵的；代价高的" },
+        { en: "consume", zh: "v. 消耗；消费" },
+        { en: "presume", zh: "v. 假定；推测" },
+        { en: "assume", zh: "v. 假定；假设；承担" },
+        { en: "resume", zh: "v. 重新开始；恢复" },
+        { en: "sign", zh: "n. 迹象；符号 v. 签名" },
+        { en: "signal", zh: "n. 信号；标志 v. 发信号" },
+        { en: "assign", zh: "v. 分配；指派" },
+        { en: "appoint", zh: "v. 任命；指定" },
+        { en: "accommodate", zh: "v. 容纳；适应；提供住宿" },
+        { en: "adapt", zh: "v. 适应；改编" },
+        { en: "adopt", zh: "v. 采用；收养" },
+        { en: "resign", zh: "v. 辞职；放弃" },
+        { en: "quit", zh: "v. 辞职；放弃" },
+        { en: "design", zh: "v./n. 设计；构思" },
+        { en: "designate", zh: "v. 指定；指派" },
+        { en: "significant", zh: "adj. 重要的；显著的" },
+        { en: "signify", zh: "v. 表示；意味着" },
+        { en: "enable", zh: "v. 使能够；使成为可能" },
+        { en: "fasten", zh: "v. 系紧；固定" },
+        { en: "enlarge", zh: "v. 扩大；放大" },
+        { en: "largely", zh: "adv. 主要地；大部分" },
+        { en: "heighten", zh: "v. 提高；增强" },
+        { en: "width", zh: "n. 宽度；广度" },
+        { en: "strengthen", zh: "v. 加强；巩固" },
+        { en: "enhance", zh: "v. 提高；增强" },
+        { en: "enlighten", zh: "v. 启发；开导" },
+        { en: "entitle", zh: "v. 使有权利；给… 题名" },
+        { en: "privilege", zh: "n. 特权；优待" },
+        { en: "honour", zh: "n. 荣誉；尊敬 v. 尊敬" },
+        { en: "dishonour", zh: "n./v. 耻辱；使丢脸" },
+        { en: "mirror", zh: "n. 镜子 v. 反映" },
+        { en: "miracle", zh: "n. 奇迹" },
+        { en: "flexible", zh: "adj. 灵活的；柔韧的" },
+        { en: "reflect", zh: "v. 反映；反射；思考" },
+        { en: "elastic", zh: "adj. 有弹性的；灵活的" },
+        { en: "blast", zh: "n. 爆炸；一阵 v. 爆炸" },
+        { en: "plastic", zh: "n. 塑料 adj. 塑料的；可塑的" },
+        ],
+        34: [
+        { en: "theme", zh: "n. 主题；题目" },
+        { en: "subject", zh: "n. 主题；科目；主语 v. 使服从" },
+        { en: "subjective", zh: "adj. 主观的" },
+        { en: "object", zh: "n. 物体；目标；宾语 v. 反对" },
+        { en: "objective", zh: "adj. 客观的 n. 目标" },
+        { en: "reject", zh: "v. 拒绝；排斥" },
+        { en: "inject", zh: "v. 注射；注入" },
+        { en: "project", zh: "v. 投射；计划 n. 项目；工程" },
+        { en: "eject", zh: "v. 喷射；驱逐" },
+        { en: "shortage", zh: "n. 短缺；不足" },
+        { en: "sufficient", zh: "adj. 足够的；充分的" },
+        { en: "deficient", zh: "adj. 不足的；缺乏的" },
+        { en: "proficient", zh: "adj. 熟练的；精通的" },
+        { en: "artificial", zh: "adj. 人工的；人造的" },
+        { en: "articulate", zh: "adj. 表达清晰的 v. 清晰表达" },
+        { en: "superficial", zh: "adj. 表面的；肤浅的" },
+        { en: "efficient", zh: "adj. 高效的；有能力的" },
+        { en: "fruitful", zh: "adj. 富有成效的；多产的" },
+        { en: "minority", zh: "n. 少数；少数民族" },
+        { en: "majority", zh: "n. 多数；大多数" },
+        { en: "major", zh: "adj. 主要的；主修的 n. 主修科目" },
+        { en: "minimum", zh: "n./adj. 最小（的）；最低（的）" },
+        { en: "miniature", zh: "adj. 微型的 n. 缩微模型" },
+        { en: "maximum", zh: "n./adj. 最大（的）；最高（的）" },
+        { en: "medium", zh: "adj. 中等的 n. 媒介；手段" },
+        { en: "intermediate", zh: "adj. 中间的；中级的" },
+        { en: "lower", zh: "adj. 较低的 v. 降低" },
+        { en: "acrobat", zh: "n. 杂技演员" },
+        { en: "beat", zh: "v. 打；打败；跳动 n. 节拍" },
+        { en: "beast", zh: "n. 野兽；牲畜" },
+        { en: "monster", zh: "n. 怪物；巨人" },
+        { en: "debate", zh: "n./v. 辩论；争论" },
+        { en: "argument", zh: "n. 争论；论点" },
+        { en: "dispute", zh: "n./v. 争论；争执" },
+        { en: "battle", zh: "n./v. 战斗；斗争" },
+        { en: "combat", zh: "n./v. 战斗；搏斗" },
+        { en: "campaign", zh: "n. 运动；战役 v. 发起运动" },
+        { en: "champion", zh: "n. 冠军；拥护者 v. 拥护" },
+        { en: "campus", zh: "n. 校园" },
+        { en: "reputation", zh: "n. 名声；名誉" },
+        { en: "prestige", zh: "n. 声望；威望" },
+        { en: "esteem", zh: "n./v. 尊重；尊敬" },
+        { en: "notorious", zh: "adj. 臭名昭著的" },
+        { en: "monotonous", zh: "adj. 单调的；乏味的" },
+        { en: "monopoly", zh: "n. 垄断；专卖" },
+        { en: "policy", zh: "n. 政策；方针" },
+        ],
+        35: [
+        { en: "vary", zh: "v. 变化；不同" },
+        { en: "various", zh: "adj. 各种各样的" },
+        { en: "variation", zh: "n. 变化；变异" },
+        { en: "shift", zh: "v./n. 转移；改变；轮班" },
+        { en: "alter", zh: "v. 改变；更改" },
+        { en: "alternative", zh: "adj. 可供选择的 n. 选择" },
+        { en: "switch", zh: "v./n. 开关；转换" },
+        { en: "convert", zh: "v. 转换；转变" },
+        { en: "conversely", zh: "adv. 相反地" },
+        { en: "divert", zh: "v. 转移；使转向" },
+        { en: "diverse", zh: "adj. 不同的；多种多样的" },
+        { en: "reverse", zh: "v. 颠倒；反转 adj. 相反的" },
+        { en: "invert", zh: "v. 使倒置；使颠倒" },
+        { en: "avert", zh: "v. 避免；转移" },
+        { en: "anniversary", zh: "n. 周年纪念日" },
+        { en: "annual", zh: "adj. 每年的；年度的" },
+        { en: "controversy", zh: "n. 争论；争议" },
+        { en: "versatile", zh: "adj. 多才多艺的；通用的" },
+        { en: "evolve", zh: "v. 进化；发展" },
+        { en: "revolve", zh: "v. 旋转；围绕" },
+        { en: "involve", zh: "v. 包含；使参与" },
+        { en: "volume", zh: "n. 体积；音量；卷" },
+        { en: "spy", zh: "n. 间谍 v. 侦察" },
+        { en: "aspect", zh: "n. 方面；层面" },
+        { en: "suspect", zh: "v. 怀疑；猜想 n. 嫌疑犯" },
+        { en: "susceptible", zh: "adj. 易受影响的；敏感的" },
+        { en: "inspect", zh: "v. 检查；视察" },
+        { en: "inspection", zh: "n. 检查；视察" },
+        { en: "respect", zh: "v./n. 尊敬；尊重" },
+        { en: "respective", zh: "adj. 各自的；分别的" },
+        { en: "spectator", zh: "n. 观众；旁观者" },
+        { en: "speculate", zh: "v. 推测；投机" },
+        { en: "spectacular", zh: "adj. 壮观的；引人注目的" },
+        { en: "perspective", zh: "n. 观点；视角；远景" },
+        { en: "prospect", zh: "n. 前景；前途" },
+        { en: "promising", zh: "adj. 有希望的；有前途的" },
+        { en: "prosper", zh: "v. 繁荣；兴旺" },
+        { en: "conspicuous", zh: "adj. 显著的；显眼的" },
+        { en: "despise", zh: "v. 鄙视；轻视" },
+        { en: "expectation", zh: "n. 期待；期望" },
+        ],
+        36: [
+        { en: "communicate", zh: "v. 交流；沟通" },
+        { en: "commute", zh: "v./n. 通勤；往返" },
+        { en: "mutual", zh: "adj. 相互的；彼此的" },
+        { en: "community", zh: "n. 社区；社会" },
+        { en: "neighbourhood", zh: "n. 街区；邻里" },
+        { en: "social", zh: "adj. 社会的；社交的" },
+        { en: "sociable", zh: "adj. 好交际的；友善的" },
+        { en: "associate", zh: "v. 联系；交往 n. 同事" },
+        { en: "combine", zh: "v. 结合；联合" },
+        { en: "connection", zh: "n. 连接；联系" },
+        { en: "link", zh: "v./n. 连接；联系" },
+        { en: "integrate", zh: "v. 整合；使一体化" },
+        { en: "emigrate", zh: "v. 移居国外" },
+        { en: "immigrant", zh: "n. 移民" },
+        { en: "migrant", zh: "n. 移民；候鸟" },
+        { en: "segregate", zh: "v. 隔离；分离" },
+        { en: "segment", zh: "n. 部分；段 v. 分割" },
+        { en: "separate", zh: "adj. 分开的 v. 分离" },
+        { en: "unify", zh: "v. 统一；使一致" },
+        { en: "union", zh: "n. 联合；工会" },
+        { en: "joint", zh: "adj. 联合的；共同的" },
+        { en: "adjoin", zh: "v. 毗连；邻近" },
+        { en: "isolate", zh: "v. 隔离；孤立" },
+        { en: "insulate", zh: "v. 隔离；使绝缘" },
+        { en: "random", zh: "adj. 随机的；任意的" },
+        { en: "arbitrary", zh: "adj. 任意的；武断的" },
+        { en: "casual", zh: "adj. 随便的；偶然的" },
+        { en: "coincide", zh: "v. 同时发生；巧合" },
+        { en: "incident", zh: "n. 事件；事变" },
+        { en: "suicide", zh: "n./v. 自杀" },
+        { en: "pesticide", zh: "n. 杀虫剂" },
+        { en: "precise", zh: "adj. 精确的；准确的" },
+        { en: "concise", zh: "adj. 简洁的；简明的" },
+        { en: "subtle", zh: "adj. 微妙的；精细的" },
+        { en: "range", zh: "n. 范围；山脉 v. 变化" },
+        { en: "arrange", zh: "v. 安排；整理" },
+        { en: "territory", zh: "n. 领土；领域" },
+        { en: "gallery", zh: "n. 画廊；美术馆" },
+        { en: "grocery", zh: "n. 杂货店；食品杂货" },
+        { en: "nursery", zh: "n. 托儿所；苗圃" },
+        { en: "scenery", zh: "n. 风景；景色" },
+        { en: "landscape", zh: "n. 风景；景观" },
+        { en: "horizon", zh: "n. 地平线；视野" },
+        { en: "orient", zh: "v. 使适应；确定方向 n. 东方" },
+        ],
+        37: [
+        { en: "describe", zh: "v. 描述；形容" },
+        { en: "subscribe", zh: "v. 订阅；认购" },
+        { en: "inscribe", zh: "v. 题写；铭刻" },
+        { en: "ascribe", zh: "v. 归因于；归咎于" },
+        { en: "script", zh: "n. 脚本；手稿" },
+        { en: "prescribe", zh: "v. 开处方；规定" },
+        { en: "manuscript", zh: "n. 手稿；原稿" },
+        { en: "graduate", zh: "v. 毕业 n. 毕业生" },
+        { en: "gradual", zh: "adj. 逐渐的；逐步的" },
+        { en: "undergraduate", zh: "n. 本科生" },
+        { en: "bachelor", zh: "n. 学士；单身汉" },
+        { en: "postgraduate", zh: "n. 研究生" },
+        { en: "master", zh: "n. 硕士；大师 v. 掌握" },
+        { en: "freshman", zh: "n. 大一新生" },
+        { en: "sophomore", zh: "n. 大二学生" },
+        { en: "junior", zh: "n. 大三学生；晚辈" },
+        { en: "senior", zh: "n. 大四学生；长辈 adj. 高级的" },
+        { en: "pursue", zh: "v. 追求；从事" },
+        { en: "chase", zh: "v. 追逐；追求" },
+        { en: "purchase", zh: "v./n. 购买" },
+        { en: "trace", zh: "v. 追踪；追溯 n. 痕迹" },
+        { en: "track", zh: "v. 追踪；跟踪 n. 轨道" },
+        { en: "trail", zh: "n. 小径；痕迹 v. 拖曳" },
+        { en: "kidnap", zh: "v. 绑架；劫持" },
+        { en: "boycott", zh: "v./n. 抵制" },
+        { en: "resist", zh: "v. 抵抗；抵制" },
+        { en: "assist", zh: "v. 帮助；协助" },
+        { en: "persist", zh: "v. 坚持；持续" },
+        { en: "persevere", zh: "v. 坚持；不屈不挠" },
+        { en: "consist", zh: "v. 由… 组成；在于" },
+        { en: "consistent", zh: "adj. 一致的；始终如一的" },
+        { en: "stock", zh: "n. 股票；库存 v. 储备" },
+        { en: "bankrupt", zh: "adj. 破产的 v. 使破产" },
+        { en: "disrupt", zh: "v. 破坏；扰乱" },
+        { en: "erupt", zh: "v. 爆发；喷发" },
+        { en: "corrupt", zh: "adj. 腐败的 v. 腐败" },
+        { en: "rot", zh: "v./n. 腐烂；腐朽" },
+        { en: "rotate", zh: "v. 旋转；轮流" },
+        { en: "bribe", zh: "n./v. 贿赂" },
+        { en: "interrupt", zh: "v. 打断；中断" },
+        { en: "interfere", zh: "v. 干涉；干扰" },
+        { en: "intervene", zh: "v. 干预；介入" },
+        { en: "interval", zh: "n. 间隔；间歇" },
+        { en: "interpret", zh: "v. 解释；口译" },
+        { en: "interview", zh: "v./n. 采访；面试" },
+        { en: "journal", zh: "n. 期刊；杂志" },
+        { en: "edit", zh: "v. 编辑；校订" },
+        { en: "version", zh: "n. 版本；译文" },
+        ],
+        38: [
+        { en: "assert", zh: "v. 断言；主张" },
+        { en: "desert", zh: "n. 沙漠 v. 遗弃；离开" },
+        { en: "dessert", zh: "n. 甜点" },
+        { en: "exert", zh: "v. 运用；施加" },
+        { en: "insert", zh: "v. 插入；嵌入" },
+        { en: "insect", zh: "n. 昆虫" },
+        { en: "worm", zh: "n. 蠕虫；虫子" },
+        { en: "claim", zh: "v./n. 声称；要求；索赔" },
+        { en: "proclaim", zh: "v. 宣布；宣告" },
+        { en: "reclaim", zh: "v. 收回；开垦" },
+        { en: "exclaim", zh: "v. 呼喊；惊叫" },
+        { en: "acclaim", zh: "v./n. 称赞；喝彩" },
+        { en: "declaim", zh: "v. 演讲；朗诵" },
+        { en: "declare", zh: "v. 宣布；声明" },
+        { en: "announce", zh: "v. 宣布；宣告" },
+        { en: "advertise", zh: "v. 做广告；宣传" },
+        { en: "confess", zh: "v. 承认；坦白" },
+        { en: "profession", zh: "n. 职业；专业" },
+        { en: "occupation", zh: "n. 职业；占有" },
+        { en: "occupy", zh: "v. 占据；占领" },
+        { en: "amateur", zh: "n./adj. 业余爱好者（的）" },
+        { en: "layman", zh: "n. 外行；门外汉" },
+        { en: "veteran", zh: "n. 老兵；老手" },
+        { en: "skilled", zh: "adj. 熟练的；有技能的" },
+        { en: "sophisticated", zh: "adj. 复杂的；老练的" },
+        { en: "sane", zh: "adj. 理智的；清醒的" },
+        { en: "renaissance", zh: "n. 文艺复兴；复兴" },
+        { en: "intelligent", zh: "adj. 聪明的；有才智的" },
+        { en: "wise", zh: "adj. 明智的；聪明的" },
+        { en: "wisdom", zh: "n. 智慧；才智" },
+        { en: "intellectual", zh: "adj. 智力的；知识分子的 n. 知识分子" },
+        { en: "lecture", zh: "n./v. 讲座；讲课" },
+        { en: "dialect", zh: "n. 方言" },
+        { en: "collect", zh: "v. 收集；聚集" },
+        { en: "select", zh: "v. 选择；挑选" },
+        { en: "elect", zh: "v. 选举；选择" },
+        { en: "vote", zh: "v./n. 投票；选举" },
+        { en: "veto", zh: "n./v. 否决；禁止" },
+        { en: "deny", zh: "v. 否认；拒绝" },
+        { en: "reserve", zh: "v. 保留；预订 n. 储备" },
+        { en: "observe", zh: "v. 观察；遵守" },
+        { en: "deserve", zh: "v. 应得；值得" },
+        { en: "conserve", zh: "v. 保存；保护" },
+        { en: "preserve", zh: "v. 保护；保存；腌制" },
+        { en: "reservoir", zh: "n. 水库；蓄水池" },
+        { en: "undermine", zh: "v. 破坏；削弱" },
+        { en: "undercut", zh: "v. 削弱；削价" },
+        { en: "undertake", zh: "v. 承担；从事" },
+        { en: "overtake", zh: "v. 超过；赶上" },
+        { en: "overpass", zh: "n. 天桥；立交桥" },
+        { en: "outline", zh: "n. 轮廓；大纲 v. 概述" },
+        { en: "outbreak", zh: "n. 爆发；突发" },
+        { en: "outset", zh: "n. 开始；开端" },
+        { en: "outlet", zh: "n. 出口；发泄途径" },
+        { en: "outweigh", zh: "v. 比… 重要；超过" },
+        { en: "outcome", zh: "n. 结果；后果" },
+        { en: "deadline", zh: "n. 截止日期" },
+        { en: "headline", zh: "n. 头条新闻；标题" },
+        ],
+        39: [
+        { en: "forth", zh: "adv. 向前；向外" },
+        { en: "foresee", zh: "v. 预见；预知" },
+        { en: "forehead", zh: "n. 额头" },
+        { en: "foremost", zh: "adj. 最重要的；最先的" },
+        { en: "forecast", zh: "v./n. 预测；预报" },
+        { en: "cast", zh: "v. 投；扔；铸造 n. 演员阵容" },
+        { en: "broadcast", zh: "v./n. 广播；播放" },
+        { en: "import", zh: "v./n. 进口；输入" },
+        { en: "export", zh: "v./n. 出口；输出" },
+        { en: "portion", zh: "n. 部分；一份" },
+        { en: "proportion", zh: "n. 比例；部分" },
+        { en: "portable", zh: "adj. 便携式的；手提的" },
+        { en: "portray", zh: "v. 描绘；扮演" },
+        { en: "trait", zh: "n. 特征；特点" },
+        { en: "character", zh: "n. 性格；角色；字符" },
+        { en: "feature", zh: "n. 特征；特色 v. 以… 为特色" },
+        { en: "depict", zh: "v. 描绘；描述" },
+        { en: "provision", zh: "n. 供应；规定；条款" },
+        { en: "item", zh: "n. 项目；条款" },
+        { en: "legislation", zh: "n. 立法；法律" },
+        { en: "mandate", zh: "n. 授权；命令 v. 授权" },
+        { en: "statute", zh: "n. 法令；法规" },
+        { en: "code", zh: "n. 代码；法典" },
+        { en: "bill", zh: "n. 账单；法案" },
+        { en: "draft", zh: "n. 草稿；草案 v. 起草" },
+        { en: "sketch", zh: "n. 草图；素描 v. 素描" },
+        { en: "drift", zh: "v./n. 漂流；漂移" },
+        { en: "float", zh: "v. 漂浮；浮动" },
+        { en: "oblige", zh: "v. 迫使；使感激" },
+        { en: "constitute", zh: "v. 构成；组成" },
+        { en: "constitution", zh: "n. 宪法；章程" },
+        { en: "institute", zh: "n. 学院；协会 v. 建立" },
+        { en: "affiliate", zh: "v. 使隶属 n. 附属机构" },
+        { en: "substitute", zh: "n. 替代品 v. 代替" },
+        { en: "replace", zh: "v. 取代；替换" },
+        { en: "displace", zh: "v. 取代；置换" },
+        { en: "obedient", zh: "adj. 服从的；顺从的" },
+        { en: "abide", zh: "v. 遵守；忍受" },
+        { en: "comply", zh: "v. 遵守；遵从" },
+        ],
+        40: [
+        { en: "valid", zh: "adj. 有效的；有根据的" },
+        { en: "invalid", zh: "adj. 无效的；有病的" },
+        { en: "solid", zh: "adj. 固体的；结实的；可靠的" },
+        { en: "consolidate", zh: "v. 巩固；合并" },
+        { en: "witness", zh: "n. 证人；目击者 v. 目击" },
+        { en: "testify", zh: "v. 作证；证明" },
+        { en: "testimony", zh: "n. 证词；证据" },
+        { en: "warrant", zh: "n. 授权令；保证 v. 保证" },
+        { en: "plea", zh: "n. 恳求；辩护" },
+        { en: "verify", zh: "v. 核实；证实" },
+        { en: "simplify", zh: "v. 简化；使简易" },
+        { en: "clarity", zh: "n. 清晰；清楚" },
+        { en: "appeal", zh: "v./n. 呼吁；上诉；吸引" },
+        { en: "prosecute", zh: "v. 起诉；检举" },
+        { en: "convict", zh: "v. 定罪 n. 罪犯" },
+        { en: "verdict", zh: "n. 裁决；结论" },
+        { en: "sue", zh: "v. 起诉；控告" },
+        { en: "court", zh: "n. 法院；法庭" },
+        { en: "jury", zh: "n. 陪审团" },
+        { en: "judgement", zh: "n. 判断；判决" },
+        { en: "justice", zh: "n. 正义；司法" },
+        { en: "justify", zh: "v. 证明… 正当；为… 辩护" },
+        { en: "adjust", zh: "v. 调整；调节" },
+        { en: "penalty", zh: "n. 惩罚；罚款" },
+        { en: "execute", zh: "v. 执行；处决" },
+        { en: "executive", zh: "adj. 行政的 n. 主管；执行官" },
+        { en: "crime", zh: "n. 犯罪；罪行" },
+        { en: "discriminate", zh: "v. 歧视；区别" },
+        { en: "condemn", zh: "v. 谴责；判刑" },
+        { en: "surrender", zh: "v./n. 投降；屈服" },
+        { en: "victim", zh: "n. 受害者；牺牲品" },
+        { en: "sacrifice", zh: "n./v. 牺牲；献祭" },
+        { en: "guilty", zh: "adj. 有罪的；内疚的" },
+        { en: "naive", zh: "adj. 天真的；幼稚的" },
+        { en: "innocent", zh: "adj. 无辜的；清白的" },
+        { en: "incentive", zh: "n. 激励；动机" },
+        { en: "decent", zh: "adj. 体面的；正派的" },
+        { en: "percentage", zh: "n. 百分比；百分率" },
+        { en: "percent", zh: "n. 百分之…" },
+        { en: "nevertheless", zh: "adv. 然而；不过" },
+        { en: "besides", zh: "adv./prep. 此外；除… 之外" },
+        { en: "furthermore", zh: "adv. 此外；而且" },
+        { en: "lest", zh: "conj. 唯恐；以免" },
+        { en: "otherwise", zh: "adv./conj. 否则；不然" },
+        ],
+    };
+
+// 全局状态
+let currentChapter = 1;
+let studyQueue = [];
+let currentIndex = 0;
+let wordStats = {}; // 单词熟练度记录
+let sessionStats = { correct: 0, total: 0, reviewCount: 0 };
+let wordbook = []; // 生词本
+let mistakes = []; // 错题本
+let showingWordbook = false; // 是否显示生词本
+let showingMistakes = false; // 是否显示错题本
+
+// DOM元素
+const card = document.getElementById('card');
+const cardContainer = document.getElementById('cardContainer');
+const wordDisplay = document.getElementById('wordDisplay');
+const definitionDisplay = document.getElementById('definitionDisplay');
+const masteryIndicator = document.getElementById('masteryIndicator');
+const reviewBadge = document.getElementById('reviewBadge');
+const chapterSelect = document.getElementById('chapterSelect');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const finishedScreen = document.getElementById('finishedScreen');
+const actionButtons = document.getElementById('actionButtons');
+const searchInput = document.getElementById('searchInput');
+const wordbookBtn = document.getElementById('wordbookBtn');
+const mistakesBtn = document.getElementById('mistakesBtn');
+const wordbookCount = document.getElementById('wordbookCount');
+const mistakesCount = document.getElementById('mistakesCount');
+const spellingBtn = document.getElementById('spellingBtn');
+const ebbinghausBtn = document.getElementById('ebbinghausBtn');
+
+// 存储键名
+function getStorageKey(type) {
+    return `wordMemory_${type}_${currentChapter}`;
+}
+
+// 保存进度
+async function saveProgress() {
+    try {
+        const progressData = {
+            queue: studyQueue,
+            index: currentIndex,
+            wordStats: wordStats,
+            sessionStats: sessionStats
+        };
+        await API.saveProgress(currentChapter, progressData);
+        // 保存生词本和错题本（全局）
+        await API.saveWordbook(wordbook);
+        await API.saveMistakes(mistakes);
+    } catch(e) {
+        console.warn('保存失败:', e);
+    }
+}
+
+// 加载进度
+async function loadProgress() {
+    try {
+        const data = await API.getProgress(currentChapter);
+        return {
+            queue: data.queue && data.queue.length > 0 ? data.queue : null,
+            index: data.index || 0,
+            stats: data.wordStats || {},
+            session: data.sessionStats || { correct: 0, total: 0, reviewCount: 0 }
+        };
+    } catch(e) {
+        console.warn('加载失败:', e);
+        return { queue: null, index: 0, stats: {}, session: { correct: 0, total: 0, reviewCount: 0 } };
+    }
+}
+
+// 加载生词本和错题本
+async function loadWordbookAndMistakes() {
+    try {
+        wordbook = await API.getWordbook();
+        mistakes = await API.getMistakes();
+        updateWordbookCount();
+        updateMistakesCount();
+    } catch(e) {
+        console.warn('加载生词本/错题本失败:', e);
+        wordbook = [];
+        mistakes = [];
+    }
+}
+
+// 重置章节
+async function resetChapter() {
+    if (!confirm('确定要重置本章进度吗？')) return;
+
+    // 通过API重置进度
+    await API.saveProgress(currentChapter, {
+        queue: [],
+        index: 0,
+        wordStats: {},
+        sessionStats: { correct: 0, total: 0, reviewCount: 0 }
+    });
+
+    await initChapter();
+}
+
+// 洗牌函数
+function shuffle(arr) {
+    const result = [...arr];
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+}
+
+// 生成学习队列（间隔复习机制）
+function generateStudyQueue(words) {
+    // 根据熟练度决定出现次数
+    // 新词或不熟悉的词出现更多次
+    const wordRounds = {};
+    let maxRounds = 0;
+
+    words.forEach(word => {
+        const mastery = wordStats[word.en]?.mastery || 0;
+        // 熟练度0: 出现3次, 熟练度1: 出现2次, 熟练度2+: 出现1次
+        const repeatCount = Math.max(1, 3 - mastery);
+        wordRounds[word.en] = repeatCount;
+        maxRounds = Math.max(maxRounds, repeatCount);
+    });
+
+    // 每轮独立 shuffle：每轮包含所有需要该轮次的词的一个副本
+    const rounds = [];
+    for (let r = 0; r < maxRounds; r++) {
+        const round = [];
+        words.forEach(word => {
+            if (wordRounds[word.en] > r) {
+                round.push({...word, isReview: r > 0});
+            }
+        });
+        rounds.push(shuffle(round));
+    }
+
+    // 交错拼接各轮，确保同一词的副本间隔足够远
+    // 并处理轮次边界处同一词连续出现的问题
+    const queue = [];
+    for (let r = 0; r < rounds.length; r++) {
+        const round = rounds[r];
+        if (r > 0 && queue.length > 0 && round.length > 1) {
+            // 检查上一轮结尾和本轮开头的词是否相同
+            const tailWord = queue[queue.length - 1].en;
+            if (round[0].en === tailWord) {
+                // 把冲突的词从开头移到随机位置
+                const item = round.shift();
+                round.splice(1 + Math.floor(Math.random() * round.length), 0, item);
+            }
+        }
+        queue.push(...round);
+    }
+
+    return queue;
+}
+
+// 初始化章节
+async function initChapter() {
+    currentChapter = parseInt(chapterSelect.value);
+
+    const saved = await loadProgress();
+    const words = allLessons[currentChapter] || [];
+
+    if (saved.queue && saved.queue.length > 0) {
+        studyQueue = saved.queue;
+        currentIndex = saved.index;
+        wordStats = saved.stats;
+        sessionStats = saved.session;
+    } else {
+        studyQueue = generateStudyQueue(words);
+        currentIndex = 0;
+        wordStats = {};
+        sessionStats = { correct: 0, total: 0, reviewCount: 0 };
+    }
+
+    finishedScreen.classList.remove('show');
+    cardContainer.style.display = 'block';
+    actionButtons.style.display = 'flex';
+
+    showCurrentCard();
+    updateStats();
+    await saveProgress();
+}
+
+// 显示当前卡片
+function showCurrentCard() {
+    if (currentIndex >= studyQueue.length) {
+        showFinished();
+        return;
+    }
+
+    const item = studyQueue[currentIndex];
+    wordDisplay.textContent = item.en;
+    definitionDisplay.textContent = item.zh;
+
+    // 更新熟练度指示器
+    const mastery = wordStats[item.en]?.mastery || 0;
+    const dots = masteryIndicator.querySelectorAll('.mastery-dot');
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('filled', i < Math.min(mastery, 3));
+    });
+
+    // 更新复习标记
+    if (item.isReview) {
+        reviewBadge.textContent = '复习';
+        reviewBadge.style.display = 'block';
+    } else {
+        reviewBadge.textContent = '新词';
+        reviewBadge.style.display = 'block';
+    }
+
+    // 重置卡片状态：先禁用动画，瞬间切回正面，再恢复动画
+    // 防止从释义面翻页时，新单词的释义在翻转动画中短暂可见
+    card.classList.add('no-transition');
+    card.classList.remove('flipped');
+    void card.offsetWidth; // 强制浏览器重绘，确保 no-transition 生效
+    card.classList.remove('no-transition');
+
+    // 更新进度
+    const progress = ((currentIndex + 1) / studyQueue.length) * 100;
+    progressFill.style.width = progress + '%';
+    progressText.textContent = `${currentIndex + 1} / ${studyQueue.length}`;
+}
+
+// 翻转卡片
+function flipCard() {
+    card.classList.toggle('flipped');
+}
+
+// 朗读单词
+function speakWord() {
+    if (currentIndex >= studyQueue.length) return;
+
+    const item = studyQueue[currentIndex];
+    const utterance = new SpeechSynthesisUtterance(item.en);
+    utterance.lang = 'en-US';
+    utterance.rate = 1;
+    speechSynthesis.speak(utterance);
+}
+
+// 标记为认识
+function markAsKnown() {
+    if (currentIndex >= studyQueue.length) return;
+
+    const item = studyQueue[currentIndex];
+    const key = item.en;
+
+    // 更新熟练度
+    if (!wordStats[key]) {
+        wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
+    }
+
+    wordStats[key].mastery = Math.min(3, wordStats[key].mastery + 1);
+    wordStats[key].correctCount++;
+
+    sessionStats.correct++;
+    sessionStats.total++;
+
+    if (item.isReview) {
+        sessionStats.reviewCount++;
+    }
+
+    currentIndex++;
+    showCurrentCard();
+    updateStats();
+    saveProgress();
+}
+
+// 标记为不认识
+function markAsUnknown() {
+    if (currentIndex >= studyQueue.length) return;
+
+    const item = studyQueue[currentIndex];
+    const key = item.en;
+
+    // 更新熟练度
+    if (!wordStats[key]) {
+        wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
+    }
+
+    wordStats[key].mastery = Math.max(0, wordStats[key].mastery - 1);
+    wordStats[key].wrongCount++;
+
+    sessionStats.total++;
+
+    if (item.isReview) {
+        sessionStats.reviewCount++;
+    }
+
+    // 将不认识的词添加到队列后面（间隔复习）
+    // currentIndex++ 后会跳到下一张，所以插入位置至少要在 currentIndex+2 之后
+    // 用 Math.max 确保至少有 2 张以上间隔，避免同一个词立刻再次出现
+    const minGap = Math.min(3, studyQueue.length - currentIndex - 1);
+    const maxGap = Math.min(8, studyQueue.length - currentIndex - 1);
+    const insertPos = currentIndex + 1 + minGap + Math.floor(Math.random() * Math.max(1, maxGap - minGap + 1));
+    studyQueue.splice(insertPos, 0, {...item, isReview: true});
+
+    currentIndex++;
+    showCurrentCard();
+    updateStats();
+    saveProgress();
+}
+
+// 更新统计面板
+function updateStats() {
+    const words = allLessons[currentChapter] || [];
+    const totalWords = words.length;
+
+    let learned = 0;
+    let learning = 0;
+
+    words.forEach(w => {
+        const stat = wordStats[w.en];
+        if (stat) {
+            if (stat.mastery >= 3) {
+                learned++;
+            } else {
+                learning++;
+            }
+        }
+    });
+
+    document.getElementById('totalCount').textContent = totalWords;
+    document.getElementById('learnedCount').textContent = learned;
+    document.getElementById('learningCount').textContent = learning;
+
+    const accuracy = sessionStats.total > 0
+        ? Math.round((sessionStats.correct / sessionStats.total) * 100)
+        : 0;
+    document.getElementById('accuracy').textContent = accuracy + '%';
+}
+
+// 显示完成界面
+function showFinished() {
+    cardContainer.style.display = 'none';
+    actionButtons.style.display = 'none';
+    finishedScreen.classList.add('show');
+
+    const words = allLessons[currentChapter] || [];
+    document.getElementById('finishedTotal').textContent = words.length;
+
+    const accuracy = sessionStats.total > 0
+        ? Math.round((sessionStats.correct / sessionStats.total) * 100)
+        : 0;
+    document.getElementById('finishedAccuracy').textContent = accuracy + '%';
+    document.getElementById('finishedReview').textContent = sessionStats.reviewCount;
+
+    // 清除本章进度（已完成）
+    localStorage.removeItem(getStorageKey('queue'));
+    localStorage.removeItem(getStorageKey('index'));
+}
+
+// 键盘快捷键
+document.addEventListener('keydown', (e) => {
+    if (finishedScreen.classList.contains('show')) return;
+
+    switch(e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            flipCard();
+            break;
+        case 'ArrowLeft':
+            e.preventDefault();
+            markAsUnknown();
+            break;
+        case 'ArrowRight':
+            e.preventDefault();
+            markAsKnown();
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            speakWord();
+            break;
+    }
+});
+
+// 章节切换
+chapterSelect.addEventListener('change', async () => {
+    await initChapter();
+});
+
+// 页面加载完成
+window.addEventListener('DOMContentLoaded', async () => {
+    // 等待 PyWebView API 就绪（如果在浏览器中运行则跳过）
+    await waitForApi(3000);
+    console.log('PyWebView API 就绪:', isPyWebView());
+
+    await initChapter();
+    await loadWordbookAndMistakes();
+    setupSearch();
+});
+
+// 页面可见性变化（保存进度）
+document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) {
+        await saveProgress();
+    }
+});
+
+// ========== 生词本功能 ==========
+function updateWordbookCount() {
+    wordbookCount.textContent = wordbook.length;
+}
+
+async function addToWordbook(word) {
+    if (!wordbook.find(w => w.en === word.en)) {
+        wordbook.push({...word, addedAt: Date.now()});
+        updateWordbookCount();
+        await saveProgress();
+    }
+}
+
+async function removeFromWordbook(wordEn) {
+    wordbook = wordbook.filter(w => w.en !== wordEn);
+    updateWordbookCount();
+    await saveProgress();
+    if (showingWordbook) {
+        renderWordList(wordbook, '生词本');
+    }
+}
+
+function toggleWordbook() {
+    showingWordbook = !showingWordbook;
+    showingMistakes = false;
+    wordbookBtn.classList.toggle('active', showingWordbook);
+    mistakesBtn.classList.remove('active');
+
+    if (showingWordbook) {
+        renderWordList(wordbook, '生词本');
+    } else {
+        hideWordList();
+    }
+}
+
+// ========== 错题本功能 ==========
+function updateMistakesCount() {
+    mistakesCount.textContent = mistakes.length;
+}
+
+async function addToMistakes(word) {
+    const existing = mistakes.find(w => w.en === word.en);
+    if (existing) {
+        existing.count = (existing.count || 1) + 1;
+        existing.lastWrongAt = Date.now();
+    } else {
+        mistakes.push({...word, count: 1, lastWrongAt: Date.now()});
+    }
+    updateMistakesCount();
+    await saveProgress();
+}
+
+async function removeFromMistakes(wordEn) {
+    mistakes = mistakes.filter(w => w.en !== wordEn);
+    updateMistakesCount();
+    await saveProgress();
+    if (showingMistakes) {
+        renderWordList(mistakes, '错题本');
+    }
+}
+
+function toggleMistakes() {
+    showingMistakes = !showingMistakes;
+    showingWordbook = false;
+    mistakesBtn.classList.toggle('active', showingMistakes);
+    wordbookBtn.classList.remove('active');
+
+    if (showingMistakes) {
+        renderWordList(mistakes, '错题本');
+    } else {
+        hideWordList();
+    }
+}
+
+// ========== 单词列表显示 ==========
+function renderWordList(words, title) {
+    hideWordList();
+
+    const listDiv = document.createElement('div');
+    listDiv.id = 'wordListPanel';
+    listDiv.style.cssText = `
+        width: 100%; max-width: 1000px; background: rgba(255,255,255,0.95);
+        border-radius: 16px; padding: 20px; margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-height: 400px; overflow-y: auto;
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;';
+    header.innerHTML = `
+        <h3 style="font-size:1.2rem; color:#2d3748;">${title} (${words.length}个)</h3>
+        <button onclick="hideWordList()" style="padding:6px 12px; border:none; background:#e2e8f0; border-radius:8px; cursor:pointer;">关闭</button>
+    `;
+    listDiv.appendChild(header);
+
+    if (words.length === 0) {
+        listDiv.innerHTML += '<p style="text-align:center; color:#a0aec0; padding:20px;">暂无单词</p>';
+    } else {
+        const table = document.createElement('table');
+        table.style.cssText = 'width:100%; border-collapse:collapse;';
+        table.innerHTML = `
+            <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;">
+                    <th style="text-align:left; padding:10px; color:#4a5568;">单词</th>
+                    <th style="text-align:left; padding:10px; color:#4a5568;">释义</th>
+                    <th style="text-align:center; padding:10px; color:#4a5568;">操作</th>
+                </tr>
+            </thead>
+        `;
+        const tbody = document.createElement('tbody');
+        words.forEach(w => {
+            const tr = document.createElement('tr');
+            tr.style.cssText = 'border-bottom:1px solid #f0f0f0;';
+            tr.innerHTML = `
+                <td style="padding:10px; font-weight:600; color:#2d3748;">${w.en}</td>
+                <td style="padding:10px; color:#718096;">${w.zh}</td>
+                <td style="padding:10px; text-align:center;">
+                    <button onclick="speakWordByText('${w.en}')" style="padding:4px 8px; border:none; background:#667eea; color:white; border-radius:6px; cursor:pointer; margin-right:6px;">朗读</button>
+                    <button onclick="${title === '生词本' ? 'removeFromWordbook' : 'removeFromMistakes'}('${w.en}')" style="padding:4px 8px; border:none; background:#f56565; color:white; border-radius:6px; cursor:pointer;">移除</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        listDiv.appendChild(table);
+    }
+
+    const toolbar = document.querySelector('.toolbar');
+    toolbar.parentNode.insertBefore(listDiv, toolbar.nextSibling);
+}
+
+function hideWordList() {
+    const existing = document.getElementById('wordListPanel');
+    if (existing) existing.remove();
+    showingWordbook = false;
+    showingMistakes = false;
+    wordbookBtn.classList.remove('active');
+    mistakesBtn.classList.remove('active');
+}
+
+// ========== 搜索功能 ==========
+function setupSearch() {
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        if (query.length === 0) {
+            hideWordList();
+            return;
+        }
+        searchWords(query);
+    });
+}
+
+function searchWords(query) {
+    const results = [];
+    for (const chapter in allLessons) {
+        allLessons[chapter].forEach(word => {
+            if (word.en.toLowerCase().includes(query) || word.zh.includes(query)) {
+                results.push({...word, chapter: parseInt(chapter)});
+            }
+        });
+    }
+    renderSearchResults(results, query);
+}
+
+function renderSearchResults(words, query) {
+    hideWordList();
+
+    const listDiv = document.createElement('div');
+    listDiv.id = 'wordListPanel';
+    listDiv.style.cssText = `
+        width: 100%; max-width: 1000px; background: rgba(255,255,255,0.95);
+        border-radius: 16px; padding: 20px; margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-height: 400px; overflow-y: auto;
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;';
+    header.innerHTML = `
+        <h3 style="font-size:1.2rem; color:#2d3748;">搜索 "${query}" (${words.length}个结果)</h3>
+        <button onclick="hideWordList(); searchInput.value='';" style="padding:6px 12px; border:none; background:#e2e8f0; border-radius:8px; cursor:pointer;">关闭</button>
+    `;
+    listDiv.appendChild(header);
+
+    if (words.length === 0) {
+        listDiv.innerHTML += '<p style="text-align:center; color:#a0aec0; padding:20px;">未找到匹配的单词</p>';
+    } else {
+        const table = document.createElement('table');
+        table.style.cssText = 'width:100%; border-collapse:collapse;';
+        table.innerHTML = `
+            <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;">
+                    <th style="text-align:left; padding:10px; color:#4a5568;">单词</th>
+                    <th style="text-align:left; padding:10px; color:#4a5568;">释义</th>
+                    <th style="text-align:center; padding:10px; color:#4a5568;">章节</th>
+                    <th style="text-align:center; padding:10px; color:#4a5568;">操作</th>
+                </tr>
+            </thead>
+        `;
+        const tbody = document.createElement('tbody');
+        words.forEach(w => {
+            const inWordbook = wordbook.find(wb => wb.en === w.en);
+            const tr = document.createElement('tr');
+            tr.style.cssText = 'border-bottom:1px solid #f0f0f0;';
+            tr.innerHTML = `
+                <td style="padding:10px; font-weight:600; color:#2d3748;">${w.en}</td>
+                <td style="padding:10px; color:#718096;">${w.zh}</td>
+                <td style="padding:10px; text-align:center; color:#a0aec0;">第${w.chapter}章</td>
+                <td style="padding:10px; text-align:center;">
+                    <button onclick="speakWordByText('${w.en}')" style="padding:4px 8px; border:none; background:#667eea; color:white; border-radius:6px; cursor:pointer; margin-right:6px;">朗读</button>
+                    <button onclick="addToWordbook({en:'${w.en}', zh:'${w.zh}'})" style="padding:4px 8px; border:none; background:${inWordbook ? '#a0aec0' : '#48bb78'}; color:white; border-radius:6px; cursor:pointer;">${inWordbook ? '已收藏' : '收藏'}</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        listDiv.appendChild(table);
+    }
+
+    const toolbar = document.querySelector('.toolbar');
+    toolbar.parentNode.insertBefore(listDiv, toolbar.nextSibling);
+}
+
+// 朗读指定文本
+function speakWordByText(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 1;
+    speechSynthesis.speak(utterance);
+}
+
+// ========== 导出导入功能 ==========
+async function exportData() {
+    const data = await API.exportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `考研单词_${new Date().toLocaleDateString()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                const result = await API.importData(data);
+
+                if (result.success) {
+                    // 重新加载数据
+                    wordbook = await API.getWordbook();
+                    mistakes = await API.getMistakes();
+                    updateWordbookCount();
+                    updateMistakesCount();
+                    alert('导入成功！');
+                    await initChapter();
+                } else {
+                    alert('导入失败：' + result.message);
+                }
+            } catch(err) {
+                alert('导入失败：文件格式不正确');
+                console.error('导入错误:', err);
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+// ========== 修改 markAsUnknown 以自动收集错题 ==========
+// 注意：markAsUnknown 已经在前面被多次包装，这里不再重复包装
+
+// ========== 添加生词本按钮到卡片 ==========
+function addWordbookButtonToCard() {
+    const cardFront = document.querySelector('.card-front');
+    if (!cardFront || document.getElementById('addWordbookBtn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'addWordbookBtn';
+    btn.style.cssText = `
+        position: absolute; bottom: 15px; right: 15px;
+        padding: 8px 14px; border: none; background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white; border-radius: 8px; cursor: pointer; font-size: 0.85rem;
+        font-weight: 600; transition: all 0.2s; z-index: 10;
+    `;
+    btn.textContent = '收藏到生词本';
+    btn.onclick = async (e) => {
+        e.stopPropagation();
+        if (currentIndex < studyQueue.length) {
+            const item = studyQueue[currentIndex];
+            await addToWordbook(item);
+            btn.textContent = '已收藏';
+            btn.style.opacity = '0.7';
+            setTimeout(() => {
+                btn.textContent = '收藏到生词本';
+                btn.style.opacity = '1';
+            }, 1500);
+        }
+    };
+    cardFront.appendChild(btn);
+}
+
+// 在初始化时添加收藏按钮
+const origShowCurrentCard = showCurrentCard;
+showCurrentCard = function() {
+    origShowCurrentCard();
+    addWordbookButtonToCard();
+};
+
+// ========== 拼写测试模式 ==========
+let spellingMode = false;
+let spellingQueue = [];
+let spellingIndex = 0;
+let spellingStats = { correct: 0, total: 0 };
+
+function toggleSpellingMode() {
+    spellingMode = !spellingMode;
+    spellingBtn.classList.toggle('active', spellingMode);
+
+    if (spellingMode) {
+        startSpellingMode();
+    } else {
+        exitSpellingMode();
+    }
+}
+
+function startSpellingMode() {
+    // 隐藏普通卡片模式
+    cardContainer.style.display = 'none';
+    actionButtons.style.display = 'none';
+    finishedScreen.classList.remove('show');
+    hideWordList();
+
+    // 显示拼写模式
+    document.getElementById('spellingMode').classList.add('active');
+
+    // 生成拼写队列
+    const words = allLessons[currentChapter] || [];
+    spellingQueue = shuffle([...words]);
+    spellingIndex = 0;
+    spellingStats = { correct: 0, total: 0 };
+
+    showSpellingCard();
+}
+
+function exitSpellingMode() {
+    spellingMode = false;
+    spellingBtn.classList.remove('active');
+    document.getElementById('spellingMode').classList.remove('active');
+
+    // 恢复普通卡片模式
+    cardContainer.style.display = 'block';
+    actionButtons.style.display = 'flex';
+    showCurrentCard();
+}
+
+function showSpellingCard() {
+    if (spellingIndex >= spellingQueue.length) {
+        showSpellingFinished();
+        return;
+    }
+
+    const item = spellingQueue[spellingIndex];
+    document.getElementById('spellingHint').textContent = item.zh;
+    document.getElementById('spellingInput').value = '';
+    document.getElementById('spellingInput').className = 'spelling-input';
+    document.getElementById('spellingFeedback').textContent = '';
+    document.getElementById('spellingFeedback').className = 'spelling-feedback';
+    document.getElementById('spellingAnswer').textContent = '';
+    document.getElementById('spellingSubmit').style.display = 'inline-block';
+    document.getElementById('spellingSkip').style.display = 'inline-block';
+
+    // 自动聚焦输入框
+    setTimeout(() => {
+        document.getElementById('spellingInput').focus();
+    }, 100);
+}
+
+function checkSpelling() {
+    const input = document.getElementById('spellingInput').value.trim().toLowerCase();
+    const item = spellingQueue[spellingIndex];
+    const correct = item.en.toLowerCase();
+
+    spellingStats.total++;
+
+    const inputEl = document.getElementById('spellingInput');
+    const feedbackEl = document.getElementById('spellingFeedback');
+    const answerEl = document.getElementById('spellingAnswer');
+
+    if (input === correct) {
+        // 正确
+        spellingStats.correct++;
+        inputEl.className = 'spelling-input correct';
+        feedbackEl.textContent = '正确！';
+        feedbackEl.className = 'spelling-feedback correct';
+
+        // 更新熟练度
+        if (!wordStats[item.en]) {
+            wordStats[item.en] = { mastery: 0, correctCount: 0, wrongCount: 0 };
+        }
+        wordStats[item.en].mastery = Math.min(3, wordStats[item.en].mastery + 1);
+        wordStats[item.en].correctCount++;
+    } else {
+        // 错误
+        inputEl.className = 'spelling-input wrong';
+        feedbackEl.textContent = '错误！';
+        feedbackEl.className = 'spelling-feedback wrong';
+        answerEl.textContent = `正确答案: ${item.en}`;
+
+        // 更新熟练度
+        if (!wordStats[item.en]) {
+            wordStats[item.en] = { mastery: 0, correctCount: 0, wrongCount: 0 };
+        }
+        wordStats[item.en].mastery = Math.max(0, wordStats[item.en].mastery - 1);
+        wordStats[item.en].wrongCount++;
+
+        // 添加到错题本
+        addToMistakes(item);
+    }
+
+    // 隐藏提交和跳过按钮，显示下一题
+    document.getElementById('spellingSubmit').style.display = 'none';
+    document.getElementById('spellingSkip').style.display = 'none';
+
+    setTimeout(() => {
+        spellingIndex++;
+        showSpellingCard();
+    }, 1500);
+}
+
+function skipSpelling() {
+    const item = spellingQueue[spellingIndex];
+    const feedbackEl = document.getElementById('spellingFeedback');
+    const answerEl = document.getElementById('spellingAnswer');
+
+    feedbackEl.textContent = '已跳过';
+    feedbackEl.className = 'spelling-feedback';
+    answerEl.textContent = `答案: ${item.en}`;
+
+    document.getElementById('spellingSubmit').style.display = 'none';
+    document.getElementById('spellingSkip').style.display = 'none';
+
+    setTimeout(() => {
+        spellingIndex++;
+        showSpellingCard();
+    }, 1500);
+}
+
+function showSpellingFinished() {
+    const accuracy = spellingStats.total > 0
+        ? Math.round((spellingStats.correct / spellingStats.total) * 100)
+        : 0;
+
+    document.getElementById('spellingHint').textContent = '拼写测试完成！';
+    document.getElementById('spellingInput').style.display = 'none';
+    document.getElementById('spellingFeedback').textContent = `正确率: ${accuracy}%`;
+    document.getElementById('spellingFeedback').className = 'spelling-feedback correct';
+    document.getElementById('spellingAnswer').textContent = `${spellingStats.correct} / ${spellingStats.total} 正确`;
+
+    document.getElementById('spellingSubmit').style.display = 'none';
+    document.getElementById('spellingSkip').style.display = 'none';
+
+    saveProgress();
+}
+
+// 拼写输入框回车事件
+document.getElementById('spellingInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        if (document.getElementById('spellingSubmit').style.display !== 'none') {
+            checkSpelling();
+        } else {
+            spellingIndex++;
+            showSpellingCard();
+        }
+    }
+});
+
+// ========== 艾宾浩斯复习模式 ==========
+let ebbinghausMode = false;
+const EBBINGHAUS_INTERVALS = [
+    20 * 60 * 1000,      // 20分钟
+    1 * 60 * 60 * 1000,  // 1小时
+    9 * 60 * 60 * 1000,  // 9小时
+    1 * 24 * 60 * 60 * 1000,  // 1天
+    2 * 24 * 60 * 60 * 1000,  // 2天
+    6 * 24 * 60 * 60 * 1000,  // 6天
+    31 * 24 * 60 * 60 * 1000  // 31天
+];
+
+function toggleEbbinghausMode() {
+    ebbinghausMode = !ebbinghausMode;
+    ebbinghausBtn.classList.toggle('active', ebbinghausMode);
+
+    if (ebbinghausMode) {
+        startEbbinghausMode();
+    } else {
+        exitEbbinghausMode();
+    }
+}
+
+async function startEbbinghausMode() {
+    // 隐藏其他模式
+    cardContainer.style.display = 'none';
+    actionButtons.style.display = 'none';
+    finishedScreen.classList.remove('show');
+    hideWordList();
+    if (spellingMode) exitSpellingMode();
+
+    // 显示艾宾浩斯模式
+    document.getElementById('ebbinghausMode').classList.add('active');
+
+    // 加载复习计划
+    await loadEbbinghausSchedule();
+}
+
+function exitEbbinghausMode() {
+    ebbinghausMode = false;
+    ebbinghausBtn.classList.remove('active');
+    document.getElementById('ebbinghausMode').classList.remove('active');
+
+    // 恢复普通卡片模式
+    cardContainer.style.display = 'block';
+    actionButtons.style.display = 'flex';
+    showCurrentCard();
+}
+
+async function loadEbbinghausSchedule() {
+    const now = Date.now();
+    const schedule = await API.getEbbinghaus();
+    const words = allLessons[currentChapter] || [];
+
+    let pending = [];
+    let completed = [];
+
+    words.forEach(word => {
+        const key = word.en;
+        const record = schedule[key];
+
+        if (!record) {
+            // 新词，需要添加到复习计划
+            pending.push({
+                ...word,
+                nextReview: now,
+                stage: 0,
+                isNew: true
+            });
+        } else if (record.nextReview <= now) {
+            // 需要复习
+            pending.push({
+                ...word,
+                nextReview: record.nextReview,
+                stage: record.stage
+            });
+        } else {
+            // 已完成本轮复习
+            completed.push({
+                ...word,
+                nextReview: record.nextReview,
+                stage: record.stage
+            });
+        }
+    });
+
+    // 按复习时间排序
+    pending.sort((a, b) => a.nextReview - b.nextReview);
+
+    // 更新统计
+    document.getElementById('ebbinghausPending').textContent = pending.length;
+    document.getElementById('ebbinghausCompleted').textContent = completed.length;
+
+    // 渲染列表
+    renderEbbinghausList(pending, completed);
+}
+
+function renderEbbinghausList(pending, completed) {
+    const listEl = document.getElementById('ebbinghausList');
+    const now = Date.now();
+
+    if (pending.length === 0 && completed.length === 0) {
+        listEl.innerHTML = '<div class="ebbinghaus-empty">本章暂无复习计划</div>';
+        return;
+    }
+
+    let html = '';
+
+    // 待复习的词
+    pending.forEach(word => {
+        const timeDiff = now - word.nextReview;
+        let timeClass = '';
+        let timeText = '';
+
+        if (timeDiff > 0) {
+            // 已超时
+            if (timeDiff > 60 * 60 * 1000) {
+                timeClass = 'urgent';
+                timeText = `超时 ${Math.floor(timeDiff / (60 * 60 * 1000))}小时`;
+            } else {
+                timeClass = 'urgent';
+                timeText = `超时 ${Math.floor(timeDiff / (60 * 1000))}分钟`;
+            }
+        } else {
+            // 未到时间
+            const absDiff = Math.abs(timeDiff);
+            if (absDiff > 24 * 60 * 60 * 1000) {
+                timeText = `${Math.floor(absDiff / (24 * 60 * 60 * 1000))}天后`;
+            } else if (absDiff > 60 * 60 * 1000) {
+                timeClass = 'soon';
+                timeText = `${Math.floor(absDiff / (60 * 60 * 1000))}小时后`;
+            } else {
+                timeClass = 'soon';
+                timeText = `${Math.floor(absDiff / (60 * 1000))}分钟后`;
+            }
+        }
+
+        html += `
+            <div class="ebbinghaus-item">
+                <div>
+                    <span class="ebbinghaus-word">${word.en}</span>
+                    <span class="ebbinghaus-meaning">${word.zh}</span>
+                </div>
+                <span class="ebbinghaus-time ${timeClass}">${timeText}</span>
+            </div>
+        `;
+    });
+
+    // 已完成的词
+    completed.forEach(word => {
+        const nextReviewDate = new Date(word.nextReview);
+        const timeText = `${nextReviewDate.getMonth() + 1}/${nextReviewDate.getDate()} 复习`;
+
+        html += `
+            <div class="ebbinghaus-item" style="opacity: 0.6;">
+                <div>
+                    <span class="ebbinghaus-word">${word.en}</span>
+                    <span class="ebbinghaus-meaning">${word.zh}</span>
+                </div>
+                <span class="ebbinghaus-time">${timeText}</span>
+            </div>
+        `;
+    });
+
+    listEl.innerHTML = html;
+}
+
+async function startEbbinghausReview() {
+    const now = Date.now();
+    const schedule = await API.getEbbinghaus();
+    const words = allLessons[currentChapter] || [];
+
+    // 收集需要复习的词
+    let reviewWords = [];
+
+    words.forEach(word => {
+        const key = word.en;
+        const record = schedule[key];
+
+        if (!record || record.nextReview <= now) {
+            reviewWords.push(word);
+        }
+    });
+
+    if (reviewWords.length === 0) {
+        alert('当前没有需要复习的单词！');
+        return;
+    }
+
+    // 开始复习（使用普通卡片模式）
+    exitEbbinghausMode();
+
+    // 创建复习队列
+    studyQueue = shuffle(reviewWords.map(w => ({...w, isReview: true})));
+    currentIndex = 0;
+
+    showCurrentCard();
+    updateStats();
+}
+
+// 更新艾宾浩斯复习计划
+async function updateEbbinghausSchedule(wordEn, isCorrect) {
+    await API.updateEbbinghaus(wordEn, isCorrect);
+}
+
+// 修改 markAsKnown 和 markAsUnknown 以更新艾宾浩斯计划
+const origMarkAsKnown2 = markAsKnown;
+markAsKnown = async function() {
+    if (currentIndex >= studyQueue.length) return;
+    const item = studyQueue[currentIndex];
+    await updateEbbinghausSchedule(item.en, true);
+    await origMarkAsKnown2();
+    updateFilterCounts();
+};
+
+const origMarkAsUnknown2 = markAsUnknown;
+markAsUnknown = async function() {
+    if (currentIndex >= studyQueue.length) return;
+    const item = studyQueue[currentIndex];
+    await updateEbbinghausSchedule(item.en, false);
+    await addToMistakes(item);
+    await origMarkAsUnknown2();
+    updateFilterCounts();
+};
+
+// ========== 熟练度筛选功能 ==========
+let currentFilter = 'all';
+
+async function filterByMastery(level) {
+    currentFilter = level;
+
+    // 更新按钮状态
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === level);
+    });
+
+    // 根据筛选重新生成学习队列
+    const words = allLessons[currentChapter] || [];
+    let filteredWords = [];
+
+    if (level === 'all') {
+        filteredWords = words;
+    } else {
+        const targetMastery = parseInt(level);
+        filteredWords = words.filter(w => {
+            const mastery = wordStats[w.en]?.mastery || 0;
+            return mastery === targetMastery;
+        });
+    }
+
+    if (filteredWords.length === 0) {
+        alert('没有符合筛选条件的单词');
+        return;
+    }
+
+    // 重新生成学习队列
+    studyQueue = generateStudyQueue(filteredWords);
+    currentIndex = 0;
+
+    // 隐藏其他模式
+    hideWordList();
+    if (spellingMode) exitSpellingMode();
+    if (ebbinghausMode) exitEbbinghausMode();
+
+    // 显示卡片
+    cardContainer.style.display = 'block';
+    actionButtons.style.display = 'flex';
+    finishedScreen.classList.remove('show');
+
+    showCurrentCard();
+    updateStats();
+    await saveProgress();
+}
+
+function updateFilterCounts() {
+    const words = allLessons[currentChapter] || [];
+    const counts = { all: words.length, 0: 0, 1: 0, 2: 0, 3: 0 };
+
+    words.forEach(w => {
+        const mastery = wordStats[w.en]?.mastery || 0;
+        counts[mastery] = (counts[mastery] || 0) + 1;
+    });
+
+    document.getElementById('filterAll').textContent = counts.all;
+    document.getElementById('filter0').textContent = counts[0];
+    document.getElementById('filter1').textContent = counts[1];
+    document.getElementById('filter2').textContent = counts[2];
+    document.getElementById('filter3').textContent = counts[3];
+}
+
+// 在初始化和更新统计时更新筛选计数
+const origUpdateStats = updateStats;
+updateStats = function() {
+    origUpdateStats();
+    updateFilterCounts();
+};
+
+// 页面加载时更新筛选计数
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(updateFilterCounts, 100);
+});
+
+// ========== 每日进度追踪日志 ==========
+let currentLogDate = getTodayStr();
+let dailyLogData = {}; // { '2026-06-04': { entries: [{text, status}], autoIncomplete: true } }
+
+function getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateDisplay(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const today = getTodayStr();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+
+    if (dateStr === today) return '今天';
+    if (dateStr === yesterdayStr) return '昨天';
+
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    return `${d.getMonth()+1}月${d.getDate()}日 周${weekdays[d.getDay()]}`;
+}
+
+// 加载日志数据
+async function loadDailyLog() {
+    if (isPyWebView()) {
+        try {
+            const result = await getApi().get_daily_log();
+            dailyLogData = typeof result === 'string' ? JSON.parse(result) : (result || {});
+        } catch(e) {
+            console.warn('加载日志失败:', e);
+            dailyLogData = {};
+        }
+    } else {
+        dailyLogData = JSON.parse(localStorage.getItem('wordMemory_dailyLog') || '{}');
+    }
+}
+
+// 保存日志数据
+async function saveDailyLog() {
+    if (isPyWebView()) {
+        try {
+            await getApi().save_daily_log_json(JSON.stringify(dailyLogData));
+        } catch(e) {
+            console.warn('保存日志失败:', e);
+        }
+    } else {
+        localStorage.setItem('wordMemory_dailyLog', JSON.stringify(dailyLogData));
+    }
+}
+
+// 切换日志面板展开/收起
+function toggleDailyLog() {
+    const content = document.getElementById('logContent');
+    const toggle = document.getElementById('logToggle');
+    content.classList.toggle('show');
+    toggle.classList.toggle('open');
+}
+
+// 切换日期
+function changeLogDate(delta) {
+    const d = new Date(currentLogDate + 'T00:00:00');
+    d.setDate(d.getDate() + delta);
+    currentLogDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    renderDailyLog();
+}
+
+// 获取当前日期的日志
+function getLogForDate(dateStr) {
+    if (!dailyLogData[dateStr]) {
+        dailyLogData[dateStr] = { entries: [], autoIncomplete: false };
+    }
+    return dailyLogData[dateStr];
+}
+
+// 渲染日志
+function renderDailyLog() {
+    document.getElementById('logDateDisplay').textContent = formatDateDisplay(currentLogDate);
+
+    const log = getLogForDate(currentLogDate);
+    const container = document.getElementById('logEntries');
+    container.innerHTML = '';
+
+    if (log.entries.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#9a9590;padding:20px;">暂无学习计划</div>';
+    } else {
+        log.entries.forEach((entry, index) => {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+
+            const checkbox = document.createElement('div');
+            checkbox.className = 'log-entry-checkbox' + (entry.status === 'done' ? ' checked' : entry.status === 'exceeded' ? ' exceeded' : entry.status === 'incomplete' ? ' incomplete' : '');
+            checkbox.innerHTML = entry.status === 'done' ? '&#10003;' : entry.status === 'exceeded' ? '&#9733;' : entry.status === 'incomplete' ? '&#10007;' : '';
+            checkbox.onclick = () => cycleLogStatus(index);
+
+            const text = document.createElement('span');
+            text.className = 'log-entry-text';
+            text.textContent = entry.text;
+
+            const status = document.createElement('span');
+            status.className = 'log-entry-status ' + (entry.status === 'done' ? 'done' : entry.status === 'exceeded' ? 'exceeded' : entry.status === 'incomplete' ? 'missed' : 'pending');
+            status.textContent = entry.status === 'done' ? '已完成' : entry.status === 'exceeded' ? '超标' : entry.status === 'incomplete' ? '未完成' : '待完成';
+
+            const delBtn = document.createElement('span');
+            delBtn.style.cssText = 'cursor:pointer;color:#9a9590;font-size:0.85rem;padding:4px;';
+            delBtn.textContent = '✕';
+            delBtn.onclick = (e) => { e.stopPropagation(); removeLogEntry(index); };
+
+            div.appendChild(checkbox);
+            div.appendChild(text);
+            div.appendChild(status);
+            div.appendChild(delBtn);
+            container.appendChild(div);
+        });
+    }
+
+    // 更新统计
+    const done = log.entries.filter(e => e.status === 'done').length;
+    const exceeded = log.entries.filter(e => e.status === 'exceeded').length;
+    const incomplete = log.entries.filter(e => e.status === 'incomplete').length;
+    const total = log.entries.length;
+
+    const summary = document.getElementById('logSummary');
+    if (total > 0) {
+        summary.innerHTML = `<div class="log-summary-text">共 <strong>${total}</strong> 项计划：完成 <strong>${done}</strong> · 超标 <strong>${exceeded}</strong> · 未完成 <strong>${incomplete}</strong> · 待完成 <strong>${total - done - exceeded - incomplete}</strong></div>`;
+    } else {
+        summary.innerHTML = '';
+    }
+
+    // 更新今日状态标签
+    updateTodayStatus();
+}
+
+// 循环切换状态：待完成 -> 已完成 -> 超标 -> 未完成 -> 待完成
+function cycleLogStatus(index) {
+    const log = getLogForDate(currentLogDate);
+    const entry = log.entries[index];
+    const states = ['pending', 'done', 'exceeded', 'incomplete'];
+    const currentIdx = states.indexOf(entry.status);
+    entry.status = states[(currentIdx + 1) % states.length];
+    saveDailyLog();
+    renderDailyLog();
+}
+
+// 添加日志条目
+function addLogEntry() {
+    const text = prompt('输入学习计划内容：');
+    if (!text || !text.trim()) return;
+
+    const log = getLogForDate(currentLogDate);
+    log.entries.push({ text: text.trim(), status: 'pending' });
+    saveDailyLog();
+    renderDailyLog();
+}
+
+// 删除日志条目
+function removeLogEntry(index) {
+    const log = getLogForDate(currentLogDate);
+    log.entries.splice(index, 1);
+    saveDailyLog();
+    renderDailyLog();
+}
+
+// 更新今日状态标签
+function updateTodayStatus() {
+    const today = getTodayStr();
+    const todayLog = getLogForDate(today);
+    const statusEl = document.getElementById('logTodayStatus');
+
+    if (todayLog.entries.length === 0) {
+        statusEl.textContent = '';
+        return;
+    }
+
+    const done = todayLog.entries.filter(e => e.status === 'done' || e.status === 'exceeded').length;
+    const total = todayLog.entries.length;
+
+    if (done >= total) {
+        statusEl.textContent = '✅ 今日计划已完成';
+        statusEl.style.color = '#5a7a5a';
+    } else {
+        statusEl.textContent = `(${done}/${total} 已完成)`;
+        statusEl.style.color = '#8a8578';
+    }
+}
+
+// 启动时检查未完成任务
+async function checkIncompleteTasks() {
+    const today = getTodayStr();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+
+    // 检查昨天未标记的任务，自动标记为未完成
+    const yesterdayLog = getLogForDate(yesterdayStr);
+    let changed = false;
+    yesterdayLog.entries.forEach(entry => {
+        if (entry.status === 'pending') {
+            entry.status = 'incomplete';
+            changed = true;
+        }
+    });
+    if (changed) {
+        yesterdayLog.autoIncomplete = true;
+        await saveDailyLog();
+    }
+
+    // 检查今天是否有未完成的计划
+    const todayLog = getLogForDate(today);
+    const incompleteYesterday = yesterdayLog.entries.filter(e => e.status === 'incomplete').length;
+    const pendingToday = todayLog.entries.filter(e => e.status === 'pending').length;
+
+    // 显示提醒
+    if (incompleteYesterday > 0 || (todayLog.entries.length > 0 && pendingToday > 0)) {
+        let icon, title, message;
+
+        if (incompleteYesterday > 0 && todayLog.entries.length > 0) {
+            icon = '&#9888;&#65039;';
+            title = '有未完成的学习任务';
+            message = `昨天有 <strong>${incompleteYesterday}</strong> 项计划未完成。今天还有 <strong>${pendingToday}</strong> 项待完成的计划，建议尽早开始学习。`;
+        } else if (incompleteYesterday > 0) {
+            icon = '&#128221;';
+            title = '昨天的计划未完成';
+            message = `昨天有 <strong>${incompleteYesterday}</strong> 项计划未完成。建议制定今天的计划并坚持执行。`;
+        } else {
+            icon = '&#128218;';
+            title = '今日学习计划';
+            message = `今天有 <strong>${pendingToday}</strong> 项待完成的计划，加油！`;
+        }
+
+        document.getElementById('reminderIcon').innerHTML = icon;
+        document.getElementById('reminderTitle').textContent = title;
+        document.getElementById('reminderMessage').innerHTML = message;
+        document.getElementById('reminderOverlay').classList.add('show');
+    }
+
+    renderDailyLog();
+}
+
+function closeReminder() {
+    document.getElementById('reminderOverlay').classList.remove('show');
+}
+
+// 初始化日志系统
+window.addEventListener('DOMContentLoaded', async () => {
+    await loadDailyLog();
+    await checkIncompleteTasks();
+});
+// 注册 Service Worker (PWA 离线支持)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
