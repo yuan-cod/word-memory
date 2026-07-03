@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -11,7 +11,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <style>
         :root {
-            /* 视觉系统 - 仿制单词记忆助手风格 */
             --primary: #4f46e5;
             --primary-hover: #4338ca;
             --primary-light: #eef2ff;
@@ -36,6 +35,27 @@
             --radius-md: 12px;
             --radius-lg: 20px;
             --radius-xl: 28px;
+        }
+
+        [data-theme="dark"] {
+            --primary: #818cf8;
+            --primary-hover: #6366f1;
+            --primary-light: #1e1b4b;
+            --text-main: #e2e8f0;
+            --text-sub: #94a3b8;
+            --bg-body: #0f172a;
+            --white: #1e293b;
+            --danger: #f87171;
+            --danger-light: #450a0a;
+            --success: #34d399;
+            --success-light: #064e3b;
+            --warning: #fbbf24;
+            --warning-light: #451a03;
+            --border: #334155;
+            --border-light: #1e293b;
+            --shadow-card: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         * {
@@ -220,13 +240,13 @@
             border-color: rgba(79, 70, 229, 0.1);
         }
 
-        /* 中间舞台 */
+        /* 中间舞台（独立滚动，不受侧边栏影响） */
         .stage {
             flex: 1;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             background: var(--bg-body);
-            position: relative;
             min-width: 0;
         }
 
@@ -239,6 +259,7 @@
             padding: 20px;
             perspective: 1500px;
             container-type: inline-size;
+            min-height: 300px;
         }
 
         /* 移动端遮罩 */
@@ -951,8 +972,12 @@
             color: var(--primary);
             line-height: 1.1;
             margin-bottom: 16px;
-            transition: transform 0.1s;
+            transition: transform 0.1s, color 0.15s;
+            cursor: pointer;
+            user-select: none;
         }
+        .word-display:hover { transform: scale(1.03); }
+        .word-display:active { color: #10b981; }
 
         .word-display:hover {
             transform: scale(1.02);
@@ -1375,6 +1400,7 @@
             </div>
         </div>
         <div class="header-group">
+            <button class="header-icon-btn" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题">&#9788;</button>
             <button class="header-icon-btn" id="toolsToggleBtn" onclick="togglePanel('tools')" title="工具栏">&#128295;</button>
             <button class="header-icon-btn" id="logToggleBtn" onclick="togglePanel('log')" title="每日进度">&#128203;</button>
             <button class="reset-btn" onclick="resetChapter()">重置</button>
@@ -1527,7 +1553,7 @@
                             <div class="mastery-dot"></div>
                             <div class="mastery-dot"></div>
                         </div>
-                        <div class="word-display" id="wordDisplay">Loading...</div>
+                        <div class="word-display" id="wordDisplay" onclick="handleWordClick(event)">Loading...</div>
                     </div>
                     <div class="card-face card-back">
                         <div class="review-badge" id="reviewBadge">新词</div>
@@ -4051,7 +4077,19 @@ function showCurrentCard() {
         return;
     }
 
+    // 如果有正在进行的动画，立即终止，防止状态冲突
+    gsap.killTweensOf(card);
+
     const item = studyQueue[currentIndex];
+
+    // 如果卡片在背面，瞬间切回正面（不播放翻转动画）
+    if (cardFlipped) {
+        gsap.set(card, { rotationY: 0 });
+        cardFlipped = false;
+    }
+    isAnimating = false;
+
+    // 更新卡片内容
     if (currentMode === 'en2zh') {
         wordDisplay.textContent = item.en;
         definitionDisplay.textContent = item.zh;
@@ -4076,84 +4114,57 @@ function showCurrentCard() {
         reviewBadge.style.display = 'block';
     }
 
-    // 如果卡片在背面，瞬间切回正面（无动画，防止内容泄露）
-    if (cardFlipped) {
-        gsap.set(card, { rotationY: 0 });
-        cardFlipped = false;
-    }
-    isAnimating = false;
-
-    // 卡片入场动画：快速缩放淡入
+    // 快速入场动画
     gsap.fromTo(card,
         { scale: 0.94, opacity: 0.5 },
         { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.7)' }
     );
 }
 
-// 翻转卡片 (GSAP 驱动)
+// ========== 翻转卡片 ==========
 function flipCard() {
     if (isAnimating || currentIndex >= studyQueue.length) return;
+    isAnimating = true;
 
     if (cardFlipped) {
-        // 从背面切回正面 —— 快速翻转，autoAlpha 防止内容泄露
-        isAnimating = true;
-        const backFace = card.querySelector('.card-back');
-        gsap.set(backFace, { autoAlpha: 0 });
+        // 背面 → 正面：快速翻转
         gsap.to(card, {
-            rotationY: 0,
-            duration: 0.25,
-            ease: 'power2.in',
-            onComplete: () => {
-                gsap.set(backFace, { autoAlpha: 1 });
-                cardFlipped = false;
-                isAnimating = false;
-            }
+            rotationY: 0, duration: 0.3, ease: 'power2.inOut',
+            onComplete: () => { cardFlipped = false; isAnimating = false; }
         });
     } else {
-        // 从正面翻到背面 —— 弹性缓动翻转
-        isAnimating = true;
+        // 正面 → 背面：弹性翻转
         gsap.to(card, {
-            rotationY: 180,
-            duration: 0.7,
-            ease: 'back.out(1.4)',
-            onComplete: () => {
-                cardFlipped = true;
-                isAnimating = false;
-            }
+            rotationY: 180, duration: 0.6, ease: 'back.out(1.3)',
+            onComplete: () => { cardFlipped = true; isAnimating = false; }
         });
     }
 }
 
-// 朗读单词
+// ========== 朗读单词 ==========
 function speakWord() {
     if (currentIndex >= studyQueue.length) return;
-
     const item = studyQueue[currentIndex];
+    speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(item.en);
     utterance.lang = 'en-US';
     utterance.rate = 1;
     speechSynthesis.speak(utterance);
 }
 
-// ========== 辅助：翻转卡片到正面（快速翻转，autoAlpha 防泄露） ==========
-function animateFlipBackToFront(tl) {
-    const backFace = card.querySelector('.card-back');
-    tl.set(backFace, { autoAlpha: 0 })
-      .to(card, { rotationY: 0, duration: 0.25, ease: 'power2.in' })
-      .set(backFace, { autoAlpha: 1 })
-      .call(() => { cardFlipped = false; });
+// 点击单词朗读（阻止冒泡到卡片翻转）
+function handleWordClick(e) {
+    e.stopPropagation();
+    speakWord();
 }
 
-// 标记为认识
+// ========== 标记为认识 ==========
 function markAsKnown() {
     if (currentIndex >= studyQueue.length || isAnimating) return;
 
     const item = studyQueue[currentIndex];
     const key = item.en;
-
-    if (!wordStats[key]) {
-        wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
-    }
+    if (!wordStats[key]) wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
     wordStats[key].mastery = Math.min(3, wordStats[key].mastery + 1);
     wordStats[key].correctCount++;
     sessionStats.correct++;
@@ -4161,79 +4172,54 @@ function markAsKnown() {
     if (item.isReview) sessionStats.reviewCount++;
 
     currentIndex++;
-    isAnimating = true;
 
-    const tl = gsap.timeline({
-        onComplete: () => {
-            isAnimating = false;
-            showCurrentCard();
-            updateStats();
-            saveProgress();
-        }
-    });
-
-    // 如果卡片在背面：先翻转回正面
-    if (cardFlipped) animateFlipBackToFront(tl);
-
-    // 绿色弹跳反馈 + 边框闪烁
+    // 绿色边框闪烁（叠加在当前卡片上）
     const frontFace = card.querySelector('.card-front');
-    tl.fromTo(frontFace,
+    gsap.fromTo(frontFace,
         { borderColor: 'rgba(16, 185, 129, 0.8)' },
-        { borderColor: '#e2e8f0', duration: 0.35, ease: 'power2.out' }
+        { borderColor: 'var(--border)', duration: 0.3, ease: 'power2.out' }
     );
-    tl.to(card, { scale: 1.06, duration: 0.1, ease: 'power2.out' }, '<')
-      .to(card, { scale: 1, duration: 0.2, ease: 'back.out(2.5)' }, '>');
+    // 轻弹反馈
+    gsap.to(card, { scale: 1.04, duration: 0.1, yoyo: true, repeat: 1, ease: 'power2.out' });
+
+    // 立即切到下一个词（不等待反馈动画完成，两个动画并行）
+    showCurrentCard();
+    updateStats();
+    saveProgress();
 }
 
-// 标记为不认识
+// ========== 标记为不认识 ==========
 function markAsUnknown() {
     if (currentIndex >= studyQueue.length || isAnimating) return;
 
     const item = studyQueue[currentIndex];
     const key = item.en;
-
-    if (!wordStats[key]) {
-        wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
-    }
+    if (!wordStats[key]) wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
     wordStats[key].mastery = Math.max(0, wordStats[key].mastery - 1);
     wordStats[key].wrongCount++;
     sessionStats.total++;
     if (item.isReview) sessionStats.reviewCount++;
 
-    // 将不认识的词添加到队列后面（间隔复习）
+    // 将不认识的词插回队列后面
     const minGap = Math.min(3, studyQueue.length - currentIndex - 1);
     const maxGap = Math.min(8, studyQueue.length - currentIndex - 1);
     const insertPos = currentIndex + 1 + minGap + Math.floor(Math.random() * Math.max(1, maxGap - minGap + 1));
     studyQueue.splice(insertPos, 0, {...item, isReview: true});
 
     currentIndex++;
-    isAnimating = true;
 
-    const tl = gsap.timeline({
-        onComplete: () => {
-            isAnimating = false;
-            showCurrentCard();
-            updateStats();
-            saveProgress();
-        }
-    });
-
-    // 如果卡片在背面：先翻转回正面
-    if (cardFlipped) animateFlipBackToFront(tl);
-
-    // 红色抖动反馈 + 卡片红色闪烁
-    tl.to(card, {
-        x: [-16, 16, -12, 12, -8, 8, -4, 4, 0],
-        duration: 0.45,
-        ease: 'power2.out'
-    });
-    // 同时正面红色边框闪烁
+    // 红色抖动 + 边框闪烁（叠加在当前卡片上）
+    gsap.to(card, { x: [-14, 14, -10, 10, -6, 6, -3, 3, 0], duration: 0.4, ease: 'power2.out' });
     const frontFace = card.querySelector('.card-front');
-    tl.fromTo(frontFace,
+    gsap.fromTo(frontFace,
         { borderColor: 'rgba(239, 68, 68, 0.8)' },
-        { borderColor: '#e2e8f0', duration: 0.4, ease: 'power2.out' },
-        '<'
+        { borderColor: 'var(--border)', duration: 0.35, ease: 'power2.out' }
     );
+
+    // 立即切到下一个词
+    showCurrentCard();
+    updateStats();
+    saveProgress();
 }
 
 // 更新统计面板
@@ -5248,6 +5234,32 @@ async function saveDailyLog() {
 }
 
 // 切换面板展开/收起（tools / log）
+// ========== 黑夜/白天主题切换 ==========
+function toggleTheme() {
+    const html = document.documentElement;
+    const btn = document.getElementById('themeToggleBtn');
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        html.removeAttribute('data-theme');
+        btn.innerHTML = '&#9788;'; // 太阳
+        localStorage.setItem('wordMemory_theme', 'light');
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        btn.innerHTML = '&#9790;'; // 月亮
+        localStorage.setItem('wordMemory_theme', 'dark');
+    }
+}
+
+// 初始化主题
+(function initTheme() {
+    const saved = localStorage.getItem('wordMemory_theme');
+    if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        const btn = document.getElementById('themeToggleBtn');
+        if (btn) btn.innerHTML = '&#9790;';
+    }
+})();
+
 function togglePanel(name) {
     const panel = document.getElementById(name + 'Panel');
     const btn = document.getElementById(name + 'ToggleBtn');
