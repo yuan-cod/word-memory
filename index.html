@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -238,7 +238,7 @@
             justify-content: center;
             padding: 20px;
             perspective: 1500px;
-            container-type: size;
+            container-type: inline-size;
         }
 
         /* 移动端遮罩 */
@@ -354,20 +354,25 @@
             border-radius: 10px;
         }
 
-        /* ========== 可折叠面板 ========== */
+        /* ========== 可折叠面板（浮层，不挤压内容） ========== */
         .collapse-panel {
-            width: 100%;
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 50;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.35s ease;
+            transition: max-height 0.3s ease;
             background: var(--white);
-            border-bottom: 1px solid transparent;
+            box-shadow: none;
+            transition: max-height 0.3s ease, box-shadow 0.3s ease;
         }
 
         .collapse-panel.show {
-            max-height: 600px;
-            border-bottom-color: var(--border);
+            max-height: 500px;
             overflow-y: auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         }
 
         .collapse-panel-inner {
@@ -4078,28 +4083,35 @@ function showCurrentCard() {
     }
     isAnimating = false;
 
-    // 卡片入场动画：轻微缩放 + 淡入
+    // 卡片入场动画：快速缩放淡入
     gsap.fromTo(card,
-        { scale: 0.92, opacity: 0.6 },
-        { scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.7)' }
+        { scale: 0.94, opacity: 0.5 },
+        { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.7)' }
     );
 }
 
 // 翻转卡片 (GSAP 驱动)
-// 正面→背面: 动画翻转; 背面→正面: 瞬间切回，防止释义内容泄露
 function flipCard() {
     if (isAnimating || currentIndex >= studyQueue.length) return;
 
     if (cardFlipped) {
-        // 从背面切回正面 — 瞬间完成，无过渡动画
-        gsap.set(card, { rotationY: 0 });
-        cardFlipped = false;
-    } else {
-        // 从正面翻到背面 — 带弹性缓动的翻转动画
+        // 从背面切回正面 —— 快速翻转，autoAlpha 防止内容泄露
         isAnimating = true;
-        const frontFace = card.querySelector('.card-front');
         const backFace = card.querySelector('.card-back');
-
+        gsap.set(backFace, { autoAlpha: 0 });
+        gsap.to(card, {
+            rotationY: 0,
+            duration: 0.25,
+            ease: 'power2.in',
+            onComplete: () => {
+                gsap.set(backFace, { autoAlpha: 1 });
+                cardFlipped = false;
+                isAnimating = false;
+            }
+        });
+    } else {
+        // 从正面翻到背面 —— 弹性缓动翻转
+        isAnimating = true;
         gsap.to(card, {
             rotationY: 180,
             duration: 0.7,
@@ -4123,82 +4135,105 @@ function speakWord() {
     speechSynthesis.speak(utterance);
 }
 
+// ========== 辅助：翻转卡片到正面（快速翻转，autoAlpha 防泄露） ==========
+function animateFlipBackToFront(tl) {
+    const backFace = card.querySelector('.card-back');
+    tl.set(backFace, { autoAlpha: 0 })
+      .to(card, { rotationY: 0, duration: 0.25, ease: 'power2.in' })
+      .set(backFace, { autoAlpha: 1 })
+      .call(() => { cardFlipped = false; });
+}
+
 // 标记为认识
 function markAsKnown() {
-    if (currentIndex >= studyQueue.length) return;
+    if (currentIndex >= studyQueue.length || isAnimating) return;
 
     const item = studyQueue[currentIndex];
     const key = item.en;
 
-    // 更新熟练度
     if (!wordStats[key]) {
         wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
     }
-
     wordStats[key].mastery = Math.min(3, wordStats[key].mastery + 1);
     wordStats[key].correctCount++;
-
     sessionStats.correct++;
     sessionStats.total++;
-
-    if (item.isReview) {
-        sessionStats.reviewCount++;
-    }
+    if (item.isReview) sessionStats.reviewCount++;
 
     currentIndex++;
+    isAnimating = true;
 
-    // GSAP 正确反馈：绿色光晕
-    gsap.fromTo(card,
-        { boxShadow: '0 0 0 0 rgba(16, 185, 129, 0.5)' },
-        { boxShadow: '0 0 40px 12px rgba(16, 185, 129, 0)', duration: 0.7, ease: 'power2.out' }
+    const tl = gsap.timeline({
+        onComplete: () => {
+            isAnimating = false;
+            showCurrentCard();
+            updateStats();
+            saveProgress();
+        }
+    });
+
+    // 如果卡片在背面：先翻转回正面
+    if (cardFlipped) animateFlipBackToFront(tl);
+
+    // 绿色弹跳反馈 + 边框闪烁
+    const frontFace = card.querySelector('.card-front');
+    tl.fromTo(frontFace,
+        { borderColor: 'rgba(16, 185, 129, 0.8)' },
+        { borderColor: '#e2e8f0', duration: 0.35, ease: 'power2.out' }
     );
-
-    showCurrentCard();
-    updateStats();
-    saveProgress();
+    tl.to(card, { scale: 1.06, duration: 0.1, ease: 'power2.out' }, '<')
+      .to(card, { scale: 1, duration: 0.2, ease: 'back.out(2.5)' }, '>');
 }
 
 // 标记为不认识
 function markAsUnknown() {
-    if (currentIndex >= studyQueue.length) return;
+    if (currentIndex >= studyQueue.length || isAnimating) return;
 
     const item = studyQueue[currentIndex];
     const key = item.en;
 
-    // 更新熟练度
     if (!wordStats[key]) {
         wordStats[key] = { mastery: 0, correctCount: 0, wrongCount: 0 };
     }
-
     wordStats[key].mastery = Math.max(0, wordStats[key].mastery - 1);
     wordStats[key].wrongCount++;
-
     sessionStats.total++;
-
-    if (item.isReview) {
-        sessionStats.reviewCount++;
-    }
+    if (item.isReview) sessionStats.reviewCount++;
 
     // 将不认识的词添加到队列后面（间隔复习）
-    // currentIndex++ 后会跳到下一张，所以插入位置至少要在 currentIndex+2 之后
-    // 用 Math.max 确保至少有 2 张以上间隔，避免同一个词立刻再次出现
     const minGap = Math.min(3, studyQueue.length - currentIndex - 1);
     const maxGap = Math.min(8, studyQueue.length - currentIndex - 1);
     const insertPos = currentIndex + 1 + minGap + Math.floor(Math.random() * Math.max(1, maxGap - minGap + 1));
     studyQueue.splice(insertPos, 0, {...item, isReview: true});
 
     currentIndex++;
+    isAnimating = true;
 
-    // GSAP 错误反馈：红色抖动
-    gsap.to(card, {
-        x: [-10, 10, -8, 8, -4, 4, 0],
+    const tl = gsap.timeline({
+        onComplete: () => {
+            isAnimating = false;
+            showCurrentCard();
+            updateStats();
+            saveProgress();
+        }
+    });
+
+    // 如果卡片在背面：先翻转回正面
+    if (cardFlipped) animateFlipBackToFront(tl);
+
+    // 红色抖动反馈 + 卡片红色闪烁
+    tl.to(card, {
+        x: [-16, 16, -12, 12, -8, 8, -4, 4, 0],
         duration: 0.45,
         ease: 'power2.out'
     });
-
-    showCurrentCard();
-    updateStats();
-    saveProgress();
+    // 同时正面红色边框闪烁
+    const frontFace = card.querySelector('.card-front');
+    tl.fromTo(frontFace,
+        { borderColor: 'rgba(239, 68, 68, 0.8)' },
+        { borderColor: '#e2e8f0', duration: 0.4, ease: 'power2.out' },
+        '<'
+    );
 }
 
 // 更新统计面板
@@ -5414,6 +5449,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-
-
-
