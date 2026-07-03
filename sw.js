@@ -1,5 +1,5 @@
 // 考研单词记忆 - Service Worker
-const CACHE = 'wordmemory-v2';
+const CACHE = 'wordmemory-v3';
 const FILES = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
