@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -8,115 +8,259 @@
     <meta name="apple-mobile-web-app-title" content="单词记忆">
     <link rel="manifest" href="./manifest.json">
     <title>考研单词记忆</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <style>
+        :root {
+            /* 视觉系统 - 仿制单词记忆助手风格 */
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #eef2ff;
+            --primary-dark: #3730a3;
+            --text-main: #334155;
+            --text-sub: #64748b;
+            --bg-body: #f8fafc;
+            --white: #ffffff;
+            --danger: #ef4444;
+            --danger-light: #fef2f2;
+            --success: #10b981;
+            --success-light: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-light: #fffbeb;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-card: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --trans-speed: 0.25s;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #f5f3ef;
-            min-height: 100vh;
+            background: var(--bg-body);
+            margin: 0;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            color: #2c2c2c;
+            color: var(--text-main);
+            overflow: hidden;
         }
 
-        /* 顶部导航栏 */
-        .header {
-            width: 100%;
-            max-width: 1000px;
+        /* ========== 顶部导航栏 ========== */
+        .app-header {
+            height: 60px;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 15px 25px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            border: 1px solid #e8e5e0;
+            padding: 0 20px;
+            flex-shrink: 0;
+            z-index: 100;
         }
 
-        .header h1 {
-            font-size: 1.4rem;
-            color: #1a1a1a;
-            font-weight: 700;
-        }
+        .header-group { display: flex; align-items: center; gap: 15px; }
 
-        .header-controls {
+        .header-icon-btn {
+            width: 38px;
+            height: 38px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 16px;
+            background: var(--white);
+            cursor: pointer;
+            transition: all var(--trans-speed);
+            position: relative;
+            flex-shrink: 0;
+            color: var(--text-sub);
         }
 
-        .chapter-select {
-            padding: 10px 20px;
-            font-size: 1rem;
-            border: 1px solid #d5d0c8;
-            border-radius: 8px;
-            background: white;
+        .header-icon-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .header-icon-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+        }
+
+        .header-icon-btn .icon-dot {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+            display: none;
+        }
+
+        .header-icon-btn .icon-dot.show { display: block; }
+
+        .header-title {
+            font-weight: 800;
+            font-size: 16px;
+            color: var(--primary);
+        }
+
+        .mode-switch {
+            display: flex;
+            background: var(--bg-body);
+            padding: 4px;
+            border-radius: var(--radius-sm);
+        }
+        .mode-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-sub);
             cursor: pointer;
-            font-weight: 600;
-            color: #2c2c2c;
             transition: all 0.2s;
         }
-
-        .chapter-select:hover {
-            border-color: #8a8578;
-        }
-
-        .chapter-select:focus {
-            outline: none;
-            border-color: #6b6560;
-            box-shadow: 0 0 0 2px rgba(107,101,96,0.15);
+        .mode-btn.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .reset-btn {
-            padding: 10px 20px;
-            background: #8b4d4d;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
             font-weight: 600;
+            color: var(--text-sub);
+            background: var(--white);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all var(--trans-speed);
         }
 
         .reset-btn:hover {
-            background: #7a4242;
+            color: var(--danger);
+            border-color: #fecaca;
+            background: var(--danger-light);
         }
 
-        /* 工具栏 */
-        .toolbar {
-            width: 100%;
-            max-width: 1000px;
+        /* ========== 主布局 (sidebar + stage) ========== */
+        .app-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 左侧边栏 */
+        .sidebar {
+            background: var(--white);
+            display: flex;
+            flex-direction: column;
+            width: 280px;
+            flex-shrink: 0;
+            z-index: 30;
+            transition: margin var(--trans-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 1px solid var(--border);
+        }
+        .sidebar.collapsed { margin-left: -280px; }
+
+        .sidebar-header {
+            padding: 18px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding: 12px 20px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            border: 1px solid #e8e5e0;
-            gap: 12px;
-            flex-wrap: wrap;
         }
 
-        .toolbar-left {
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            scroll-behavior: smooth;
+        }
+
+        .list-item {
+            padding: 12px 14px;
+            margin-bottom: 6px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 10px;
-            flex: 1;
-            min-width: 200px;
+            justify-content: space-between;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .list-item:hover { background: var(--bg-body); }
+        .list-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 700;
+            border-color: rgba(79, 70, 229, 0.1);
         }
 
-        .toolbar-right {
+        /* 中间舞台 */
+        .stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-body);
+            position: relative;
+            min-width: 0;
+        }
+
+        /* 响应式卡片容器 */
+        .card-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            perspective: 1500px;
+            container-type: size;
+        }
+
+        /* 移动端遮罩 */
+        .overlay {
+            display: none;
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 35;
+            backdrop-filter: blur(4px);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .overlay.show { display: block; opacity: 1; }
+
+        /* ========== 工具栏 ========== */
+        .toolbar-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .toolbar-left, .toolbar-right {
             display: flex;
             align-items: center;
             gap: 10px;
@@ -124,775 +268,200 @@
 
         .search-box {
             position: relative;
-            flex: 1;
-            max-width: 300px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px 15px 10px 38px;
-            border: 1px solid #d5d0c8;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            background: #faf9f7;
-            transition: all 0.2s;
-            color: #2c2c2c;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #6b6560;
-            box-shadow: 0 0 0 2px rgba(107,101,96,0.15);
-            background: white;
+            display: flex;
+            align-items: center;
         }
 
         .search-icon {
             position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #9a9590;
-            font-size: 1rem;
+            left: 14px;
+            color: var(--text-sub);
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 280px;
+            padding: 10px 16px 10px 40px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--white);
+            transition: all var(--trans-speed);
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            width: 320px;
+        }
+
+        .search-input::placeholder {
+            color: #94a3b8;
         }
 
         .toolbar-btn {
-            padding: 10px 16px;
-            border: 1px solid #d5d0c8;
-            border-radius: 8px;
-            background: white;
-            color: #4a4540;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 6px;
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            background: var(--white);
+            cursor: pointer;
+            transition: all var(--trans-speed);
+            position: relative;
         }
 
         .toolbar-btn:hover {
-            border-color: #8a8578;
-            color: #2c2c2c;
-            background: #faf9f7;
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
         }
 
         .toolbar-btn.active {
-            background: #4a4540;
-            color: white;
-            border-color: transparent;
-        }
-
-        .toolbar-btn .badge {
-            background: #8b4d4d;
-            color: white;
-            font-size: 0.75rem;
-            padding: 2px 6px;
-            border-radius: 10px;
-            min-width: 18px;
-            text-align: center;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
         }
 
         .toolbar-btn.active .badge {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.25);
+            color: var(--white);
         }
 
-        /* 拼写测试模式 */
-        .spelling-mode {
-            display: none;
-            width: 100%;
-            max-width: 1000px;
-            margin-bottom: 25px;
+        .toolbar-btn:active {
+            transform: translateY(0);
         }
 
-        .spelling-mode.active {
-            display: block;
-        }
-
-        .spelling-card {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            border: 1px solid #e8e5e0;
-            text-align: center;
-        }
-
-        .spelling-hint {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 30px;
-        }
-
-        .spelling-input {
-            width: 100%;
-            max-width: 400px;
-            padding: 15px 20px;
-            border: 2px solid #d5d0c8;
-            border-radius: 10px;
-            font-size: 1.5rem;
-            text-align: center;
-            letter-spacing: 2px;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-            color: #2c2c2c;
-        }
-
-        .spelling-input:focus {
-            outline: none;
-            border-color: #6b6560;
-            box-shadow: 0 0 0 3px rgba(107,101,96,0.15);
-        }
-
-        .spelling-input.correct {
-            border-color: #5a7a5a;
-            box-shadow: 0 0 0 3px rgba(90,122,90,0.15);
-        }
-
-        .spelling-input.wrong {
-            border-color: #8b4d4d;
-            box-shadow: 0 0 0 3px rgba(139,77,77,0.15);
-        }
-
-        .spelling-feedback {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            min-height: 30px;
-        }
-
-        .spelling-feedback.correct {
-            color: #5a7a5a;
-        }
-
-        .spelling-feedback.wrong {
-            color: #8b4d4d;
-        }
-
-        .spelling-answer {
-            font-size: 1.3rem;
-            color: #6b6560;
-            margin-bottom: 20px;
-        }
-
-        .spelling-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .spelling-btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .spelling-btn.primary {
-            background: #4a4540;
-            color: white;
-        }
-
-        .spelling-btn.primary:hover {
-            background: #3a3530;
-        }
-
-        .spelling-btn.secondary {
-            background: #e8e5e0;
-            color: #4a4540;
-        }
-
-        .spelling-btn.secondary:hover {
-            background: #d5d0c8;
-        }
-
-        /* 艾宾浩斯复习模式 */
-        .ebbinghaus-mode {
-            display: none;
-            width: 100%;
-            max-width: 1000px;
-            margin-bottom: 25px;
-        }
-
-        .ebbinghaus-mode.active {
-            display: block;
-        }
-
-        .ebbinghaus-card {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            border: 1px solid #e8e5e0;
-        }
-
-        .ebbinghaus-header {
-            display: flex;
-            justify-content: space-between;
+        .badge {
+            display: inline-flex;
             align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .ebbinghaus-title {
-            font-size: 1.3rem;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            font-size: 11px;
             font-weight: 700;
-            color: #1a1a1a;
+            color: var(--white);
+            background: var(--primary);
+            border-radius: 10px;
         }
 
-        .ebbinghaus-stats {
-            display: flex;
-            gap: 15px;
+        /* ========== 可折叠面板 ========== */
+        .collapse-panel {
+            width: 100%;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+            background: var(--white);
+            border-bottom: 1px solid transparent;
         }
 
-        .ebbinghaus-stat {
-            padding: 8px 14px;
-            background: #faf9f7;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            color: #4a4540;
-            border: 1px solid #e8e5e0;
-        }
-
-        .ebbinghaus-stat span {
-            font-weight: 700;
-            color: #4a4540;
-        }
-
-        .ebbinghaus-list {
-            max-height: 300px;
+        .collapse-panel.show {
+            max-height: 600px;
+            border-bottom-color: var(--border);
             overflow-y: auto;
         }
 
-        .ebbinghaus-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 15px;
-            border-bottom: 1px solid #f0ede8;
-            transition: background 0.2s;
+        .collapse-panel-inner {
+            padding: 8px 24px;
         }
 
-        .ebbinghaus-item:hover {
-            background: #faf9f7;
-        }
-
-        .ebbinghaus-word {
-            font-weight: 600;
-            color: #2c2c2c;
-        }
-
-        .ebbinghaus-meaning {
-            color: #6b6560;
-            margin-left: 15px;
-        }
-
-        .ebbinghaus-time {
-            font-size: 0.85rem;
-            color: #8a8578;
-            padding: 4px 8px;
-            background: #f0ede8;
-            border-radius: 6px;
-        }
-
-        .ebbinghaus-time.urgent {
-            background: #f0dede;
-            color: #8b4d4d;
-        }
-
-        .ebbinghaus-time.soon {
-            background: #f0ead6;
-            color: #7a6b3a;
-        }
-
-        .ebbinghaus-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .ebbinghaus-empty {
-            text-align: center;
-            padding: 40px;
-            color: #9a9590;
-        }
-
-        /* 熟练度筛选 */
-        .filter-bar {
-            width: 100%;
-            max-width: 1000px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn {
-            padding: 8px 16px;
-            border: 1px solid #d5d0c8;
-            border-radius: 20px;
-            background: #ffffff;
-            color: #4a4540;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .filter-btn:hover {
-            background: #faf9f7;
-            border-color: #8a8578;
-        }
-
-        .filter-btn.active {
-            background: #4a4540;
-            color: white;
-            border-color: transparent;
-        }
-
-        .filter-btn .filter-count {
-            display: inline-block;
-            min-width: 20px;
-            padding: 2px 6px;
-            background: rgba(0,0,0,0.08);
-            border-radius: 10px;
-            margin-left: 6px;
-            font-size: 0.8rem;
-        }
-
-        .filter-btn.active .filter-count {
-            background: rgba(255,255,255,0.25);
-        }
-
-        /* 统计面板 */
-        .stats-panel {
-            width: 100%;
-            max-width: 1000px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            border: 1px solid #e8e5e0;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #2c2c2c;
-        }
-
-        .stat-label {
-            font-size: 0.85rem;
-            color: #8a8578;
-            margin-top: 5px;
-            font-weight: 500;
-        }
-
-        /* 进度条 */
-        .progress-container {
-            width: 100%;
-            max-width: 1000px;
-            margin-bottom: 25px;
-        }
-
-        .progress-bar {
-            height: 8px;
-            background: #e8e5e0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: #6b6560;
-            border-radius: 8px;
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .progress-text {
-            text-align: center;
-            color: #6b6560;
-            font-size: 0.9rem;
-            margin-top: 8px;
-            font-weight: 500;
-        }
-
-        /* 卡片容器 */
-        .card-container {
-            width: 100%;
-            max-width: 1000px;
-            perspective: 1500px;
-            margin-bottom: 25px;
-        }
-
-        .card {
-            width: 100%;
-            height: 400px;
-            position: relative;
-            cursor: pointer;
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-        }
-
-        .card.flipped {
-            transform: rotateY(180deg);
-        }
-
-        .card.no-transition {
-            transition: none !important;
-        }
-
-        .card-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            border-radius: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 1px solid #e8e5e0;
-        }
-
-        .card-front {
-            background: #ffffff;
-        }
-
-        .card-back {
-            background: #3a3530;
-            transform: rotateY(180deg);
-        }
-
-        .word-display {
-            font-size: 4.5rem;
-            font-weight: 800;
-            color: #1a1a1a;
-            text-align: center;
-            margin-bottom: 15px;
-            line-height: 1.2;
-        }
-
-        .mastery-indicator {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .mastery-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #e8e5e0;
-            transition: all 0.3s;
-        }
-
-        .mastery-dot.filled {
-            background: #5a7a5a;
-        }
-
-        .hint-text {
-            color: #9a9590;
-            font-size: 1rem;
-            font-weight: 500;
-        }
-
-        .definition-display {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #f5f3ef;
-            text-align: center;
-            line-height: 1.4;
-        }
-
-        .review-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.15);
-            color: #f5f3ef;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        /* 操作按钮 */
-        .action-buttons {
-            width: 100%;
-            max-width: 1000px;
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin-bottom: 25px;
-        }
-
-        .action-btn {
-            flex: 1;
-            max-width: 200px;
-            padding: 18px 30px;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .know-btn {
-            background: #5a7a5a;
-            color: white;
-        }
-
-        .know-btn:hover {
-            background: #4d6b4d;
-        }
-
-        .dont-know-btn {
-            background: #8b4d4d;
-            color: white;
-        }
-
-        .dont-know-btn:hover {
-            background: #7a4242;
-        }
-
-        /* 快捷键提示 */
-        .shortcuts-hint {
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 15px 25px;
-            display: flex;
-            gap: 30px;
-            border: 1px solid #e8e5e0;
-        }
-
-        .shortcut-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #6b6560;
-            font-size: 0.9rem;
-        }
-
-        .key {
-            background: #f0ede8;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: #4a4540;
-            border: 1px solid #d5d0c8;
-        }
-
-        /* 完成界面 */
-        .finished-screen {
-            display: none;
-            width: 100%;
-            max-width: 600px;
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 60px 40px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 1px solid #e8e5e0;
-        }
-
-        .finished-screen.show {
-            display: block;
-        }
-
-        .finished-icon {
-            font-size: 5rem;
-            margin-bottom: 20px;
-        }
-
-        .finished-title {
-            font-size: 2.5rem;
-            color: #1a1a1a;
-            font-weight: 800;
-            margin-bottom: 15px;
-        }
-
-        .finished-subtitle {
-            font-size: 1.2rem;
-            color: #6b6560;
-            margin-bottom: 30px;
-        }
-
-        .finished-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .finished-stat {
-            background: #faf9f7;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #e8e5e0;
-        }
-
-        .finished-stat-value {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #2c2c2c;
-        }
-
-        .finished-stat-label {
-            font-size: 0.85rem;
-            color: #8a8578;
-            margin-top: 5px;
-        }
-
-        .restart-btn {
-            padding: 15px 40px;
-            background: #4a4540;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .restart-btn:hover {
-            background: #3a3530;
-        }
-
-        /* ========== 每日进度追踪日志 ========== */
-        .daily-log-panel {
-            width: 100%;
-            max-width: 1000px;
-            margin-bottom: 20px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            border: 1px solid #e8e5e0;
-            overflow: hidden;
-        }
-
-        .daily-log-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 20px;
-            background: #faf9f7;
-            border-bottom: 1px solid #e8e5e0;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .daily-log-header:hover {
-            background: #f5f3ef;
-        }
-
-        .daily-log-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #2c2c2c;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .daily-log-toggle {
-            font-size: 0.85rem;
-            color: #8a8578;
-            transition: transform 0.2s;
-        }
-
-        .daily-log-toggle.open {
-            transform: rotate(180deg);
-        }
-
-        .daily-log-content {
-            display: none;
-            padding: 20px;
-        }
-
-        .daily-log-content.show {
-            display: block;
-        }
-
+        /* ========== 每日进度日志 ========== */
         .log-date-nav {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
         }
 
         .log-date-btn {
             padding: 6px 12px;
-            border: 1px solid #d5d0c8;
-            border-radius: 6px;
-            background: white;
-            color: #4a4540;
-            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-sub);
+            background: var(--white);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all var(--trans-speed);
         }
 
         .log-date-btn:hover {
-            background: #faf9f7;
-            border-color: #8a8578;
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         .log-date-display {
-            font-size: 1.1rem;
+            font-size: 14px;
             font-weight: 700;
-            color: #2c2c2c;
-            min-width: 150px;
-            text-align: center;
+            color: var(--primary);
         }
 
         .log-entries {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            padding: 12px 16px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .log-add-btn {
+            display: block;
+            width: calc(100% - 32px);
+            margin: 0 16px 12px;
+            padding: 10px;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sub);
+            background: transparent;
+            cursor: pointer;
+            transition: all var(--trans-speed);
+        }
+
+        .log-add-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .log-summary {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-light);
+            font-size: 13px;
+            color: var(--text-sub);
         }
 
         .log-entry {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px 16px;
-            background: #faf9f7;
-            border-radius: 8px;
-            border: 1px solid #e8e5e0;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
         }
 
         .log-entry-checkbox {
             width: 22px;
             height: 22px;
             border: 2px solid #d5d0c8;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
+            font-size: 12px;
             flex-shrink: 0;
         }
 
@@ -928,7 +497,6 @@
             font-size: 0.8rem;
             padding: 3px 8px;
             border-radius: 4px;
-            font-weight: 600;
         }
 
         .log-entry-status.done {
@@ -951,55 +519,19 @@
             color: #8a8578;
         }
 
-        .log-summary {
-            margin-top: 20px;
-            padding: 15px;
-            background: #faf9f7;
-            border-radius: 8px;
-            border: 1px solid #e8e5e0;
-            text-align: center;
-        }
-
-        .log-summary-text {
-            font-size: 0.95rem;
-            color: #6b6560;
-        }
-
-        .log-summary-text strong {
-            color: #2c2c2c;
-        }
-
-        .log-add-btn {
-            margin-top: 15px;
-            padding: 10px 20px;
-            border: 1px dashed #d5d0c8;
-            border-radius: 8px;
-            background: transparent;
-            color: #8a8578;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-        }
-
-        .log-add-btn:hover {
-            border-color: #8a8578;
-            color: #4a4540;
-            background: #faf9f7;
-        }
-
-        /* 启动提醒弹窗 */
+        /* ========== 提醒弹窗 ========== */
         .reminder-overlay {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.3);
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
             z-index: 1000;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
         }
 
         .reminder-overlay.show {
@@ -1007,171 +539,880 @@
         }
 
         .reminder-box {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 35px 40px;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            border: 1px solid #e8e5e0;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 32px;
             text-align: center;
+            max-width: 400px;
+            box-shadow: var(--shadow-card);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .reminder-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
+            font-size: 48px;
+            margin-bottom: 16px;
         }
 
         .reminder-title {
-            font-size: 1.4rem;
+            font-size: 18px;
             font-weight: 700;
-            color: #2c2c2c;
-            margin-bottom: 12px;
+            color: var(--text-main);
+            margin-bottom: 8px;
         }
 
         .reminder-message {
-            font-size: 1rem;
-            color: #6b6560;
-            margin-bottom: 25px;
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-bottom: 24px;
             line-height: 1.6;
         }
 
         .reminder-btn {
-            padding: 12px 30px;
-            background: #4a4540;
-            color: white;
+            padding: 12px 32px;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--white);
+            background: var(--primary);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all var(--trans-speed);
         }
 
         .reminder-btn:hover {
-            background: #3a3530;
+            background: var(--primary-hover);
+            transform: translateY(-1px);
         }
 
-        /* 响应式 */
-        @media (max-width: 768px) {
-            .stats-panel {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        /* ========== 熟练度筛选栏 ========== */
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 24px;
+            flex-shrink: 0;
+        }
 
-            .word-display {
-                font-size: 3rem;
-            }
+        .filter-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sub);
+            background: var(--white);
+            cursor: pointer;
+            transition: all var(--trans-speed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
 
-            .definition-display {
-                font-size: 1.8rem;
-            }
+        .filter-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
 
-            .card {
-                height: 320px;
-            }
+        .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+        }
 
-            .shortcuts-hint {
+        .filter-btn.active .filter-count {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--white);
+        }
+
+        .filter-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 20px;
+            padding: 0 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-sub);
+            background: var(--bg-body);
+            border-radius: 10px;
+        }
+
+        /* ========== 拼写测试模式 ========== */
+        .spelling-mode {
+            display: none;
+            flex: 1;
+            padding: 20px 24px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spelling-mode.active {
+            display: flex;
+        }
+
+        .spelling-card {
+            width: 100%;
+            max-width: 560px;
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: 40px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .spelling-hint {
+            font-size: 16px;
+            color: var(--text-sub);
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        .spelling-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 2px;
+            outline: none;
+            transition: all var(--trans-speed);
+            margin-bottom: 16px;
+        }
+
+        .spelling-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        .spelling-feedback {
+            font-size: 14px;
+            font-weight: 600;
+            min-height: 24px;
+            margin-bottom: 8px;
+        }
+
+        .spelling-feedback.correct {
+            color: var(--success);
+        }
+
+        .spelling-feedback.wrong {
+            color: var(--danger);
+        }
+
+        .spelling-answer {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            min-height: 28px;
+            margin-bottom: 24px;
+        }
+
+        .spelling-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .spelling-btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--trans-speed);
+        }
+
+        .spelling-btn.primary {
+            background: var(--primary);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .spelling-btn.primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .spelling-btn.secondary {
+            background: var(--bg-body);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .spelling-btn.secondary:hover {
+            background: var(--border-light);
+        }
+
+        /* ========== 艾宾浩斯复习模式 ========== */
+        .ebbinghaus-mode {
+            display: none;
+            flex: 1;
+            padding: 20px 24px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ebbinghaus-mode.active {
+            display: flex;
+        }
+
+        .ebbinghaus-card {
+            width: 100%;
+            max-width: 640px;
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border);
+        }
+
+        .ebbinghaus-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .ebbinghaus-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .ebbinghaus-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .ebbinghaus-stat {
+            font-size: 13px;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .ebbinghaus-stat span {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .ebbinghaus-list {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-bottom: 24px;
+        }
+
+        .ebbinghaus-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .ebbinghaus-item:hover {
+            background: var(--bg-body);
+        }
+
+        .ebbinghaus-word {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .ebbinghaus-meaning {
+            color: var(--text-sub);
+            margin-left: 15px;
+            font-size: 14px;
+        }
+
+        .ebbinghaus-time {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            padding: 4px 8px;
+            background: var(--border-light);
+            border-radius: 6px;
+        }
+
+        .ebbinghaus-time.urgent {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .ebbinghaus-time.soon {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .ebbinghaus-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+
+        .ebbinghaus-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+
+
+        /* ========== 单词卡片 ========== */
+        .card {
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 4/3;
+            max-height: 70vh;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: max-width var(--trans-speed);
+            cursor: pointer;
+        }
+
+        /* 侧边栏收起时卡片放大 */
+        .sidebar.collapsed + .stage .card { max-width: 850px; }
+
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: var(--radius-xl);
+            background: var(--white);
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .card-front {
+            z-index: 2;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .mastery-indicator {
+            position: absolute;
+            top: 28px;
+            left: 28px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .mastery-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all var(--trans-speed);
+        }
+
+        .mastery-dot.filled {
+            background: var(--primary);
+            box-shadow: 0 0 8px rgba(79, 70, 229, 0.4);
+        }
+
+        .word-display {
+            font-size: clamp(32px, 11cqw, 90px);
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1.1;
+            margin-bottom: 16px;
+            transition: transform 0.1s;
+        }
+
+        .word-display:hover {
+            transform: scale(1.02);
+        }
+
+        .review-badge {
+            position: absolute;
+            top: 28px;
+            right: 28px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+            background: var(--primary-light);
+            border-radius: 20px;
+        }
+
+        .definition-display {
+            font-size: clamp(22px, 5.5cqw, 48px);
+            color: var(--white);
+            line-height: 1.5;
+            font-weight: 500;
+            max-width: 90%;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ========== 操作按钮 ========== */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 0 24px 28px;
+            flex-shrink: 0;
+        }
+
+        .action-btn {
+            flex: 1;
+            max-width: 240px;
+            height: 64px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--trans-speed);
+        }
+
+        .action-btn span:first-child {
+            font-size: 22px;
+        }
+
+        .dont-know-btn {
+            background: var(--danger-light);
+            color: var(--danger);
+            border: 2px solid #fecaca;
+        }
+
+        .dont-know-btn:hover {
+            background: #fee2e2;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -6px rgba(239, 68, 68, 0.3);
+        }
+
+        .know-btn {
+            background: var(--success-light);
+            color: var(--success);
+            border: 2px solid #a7f3d0;
+        }
+
+        .know-btn:hover {
+            background: #d1fae5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.3);
+        }
+
+        .action-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* ========== 完成界面 ========== */
+        .finished-screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+
+        .finished-screen.show {
+            display: flex;
+        }
+
+        .finished-icon {
+            font-size: 72px;
+            margin-bottom: 20px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .finished-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .finished-subtitle {
+            font-size: 16px;
+            color: var(--text-sub);
+            margin-bottom: 32px;
+        }
+
+        .finished-stats {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+
+        .finished-stat {
+            text-align: center;
+            padding: 20px 32px;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .finished-stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .finished-stat-label {
+            font-size: 13px;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .restart-btn {
+            padding: 14px 40px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--white);
+            background: var(--primary);
+            cursor: pointer;
+            transition: all var(--trans-speed);
+            box-shadow: 0 8px 20px -6px rgba(79, 70, 229, 0.4);
+        }
+
+        .restart-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        /* ========== 单词列表弹窗 ========== */
+        .word-list-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .word-list-modal.show {
+            display: flex;
+        }
+
+        .word-list-container {
+            width: 100%;
+            max-width: 560px;
+            max-height: 80vh;
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+        }
+
+        .word-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .word-list-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .word-list-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--bg-body);
+            color: var(--text-sub);
+            cursor: pointer;
+            font-size: 18px;
+            transition: all var(--trans-speed);
+        }
+
+        .word-list-close:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .word-list-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .word-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--trans-speed);
+            margin-bottom: 4px;
+        }
+
+        .word-list-item:hover {
+            background: var(--bg-body);
+        }
+
+        .word-list-item .word-en {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-right: 12px;
+            min-width: 120px;
+        }
+
+        .word-list-item .word-zh {
+            color: var(--text-sub);
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .word-list-item .remove-btn {
+            opacity: 0;
+            padding: 4px 8px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-sub);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all var(--trans-speed);
+        }
+
+        .word-list-item:hover .remove-btn {
+            opacity: 1;
+        }
+
+        .word-list-item .remove-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .word-list-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+
+        /* ========== 搜索结果 ========== */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 4px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 50;
+            display: none;
+        }
+
+        .search-results.show {
+            display: block;
+        }
+
+        .search-result-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all var(--trans-speed);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-item:hover {
+            background: var(--primary-light);
+        }
+
+        .search-result-item .result-en {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .search-result-item .result-zh {
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        /* ========== 响应式适配 ========== */
+        @media (max-width: 900px) {
+            .toolbar-inner {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .toolbar-left, .toolbar-right {
                 flex-wrap: wrap;
-                gap: 15px;
+                justify-content: center;
             }
-
-            .finished-stats {
-                grid-template-columns: 1fr;
+            .search-input { width: 100%; }
+            .search-input:focus { width: 100%; }
+            .filter-bar {
+                flex-wrap: wrap;
+                padding: 10px 16px;
+            }
+            .filter-btn {
+                flex: 1 1 calc(50% - 4px);
+                min-width: calc(50% - 4px);
             }
         }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute; height: 100%;
+                left: 0; margin-left: -280px;
+                box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            }
+            .sidebar.mobile-open { margin-left: 0; }
+            .card { aspect-ratio: auto; height: 62vh; max-height: none; }
+            .word-display { font-size: 42px; }
+            .definition-display { font-size: 24px; }
+        }
+
+        @media (max-width: 600px) {
+            .app-header { padding: 0 16px; height: 56px; }
+            .header-title { font-size: 14px; }
+            .card { max-height: 50vh; }
+            .action-buttons { gap: 12px; padding: 0 16px 20px; }
+            .action-btn { height: 56px; font-size: 13px; }
+            .action-btn span:first-child { font-size: 18px; }
+            .finished-stats { flex-direction: column; gap: 12px; }
+            .finished-stat { padding: 16px 24px; }
+        }
+
+        /* ========== 滚动条美化 ========== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
     </style>
 </head>
 <body>
     <!-- 顶部导航栏 -->
-    <div class="header">
-        <h1>考研单词记忆</h1>
-        <div class="header-controls">
-            <select class="chapter-select" id="chapterSelect">
-                <option value="1">第1章</option>
-<option value="2">第2章</option>
-<option value="3">第3章</option>
-<option value="4">第4章</option>
-<option value="5">第5章</option>
-<option value="6">第6章</option>
-<option value="7">第7章</option>
-<option value="8">第8章</option>
-<option value="9">第9章</option>
-<option value="10">第10章</option>
-<option value="11">第11章</option>
-<option value="12">第12章</option>
-<option value="13">第13章</option>
-<option value="14">第14章</option>
-<option value="15">第15章</option>
-<option value="16">第16章</option>
-<option value="17">第17章</option>
-<option value="18">第18章</option>
-<option value="19">第19章</option>
-<option value="20">第20章</option>
-<option value="21">第21章</option>
-<option value="22">第22章</option>
-<option value="23">第23章</option>
-<option value="24">第24章</option>
-<option value="25">第25章</option>
-<option value="26">第26章</option>
-<option value="27">第27章</option>
-<option value="28">第28章</option>
-<option value="29">第29章</option>
-<option value="30">第30章</option>
-<option value="31">第31章</option>
-<option value="32">第32章</option>
-<option value="33">第33章</option>
-<option value="34">第34章</option>
-<option value="35">第35章</option>
-<option value="36">第36章</option>
-<option value="37">第37章</option>
-<option value="38">第38章</option>
-<option value="39">第39章</option>
-<option value="40">第40章</option>
-            </select>
-            <button class="reset-btn" onclick="resetChapter()">重置进度</button>
+    <header class="app-header">
+        <div class="header-group">
+            <button class="header-icon-btn" onclick="toggleSidebar()" title="目录">&#9776;</button>
+            <span class="header-title">考研单词记忆</span>
+            <div class="mode-switch">
+                <button class="mode-btn active" onclick="setMode('en2zh', this)">英 &#10140; 中</button>
+                <button class="mode-btn" onclick="setMode('zh2en', this)">中 &#10140; 英</button>
+            </div>
+        </div>
+        <div class="header-group">
+            <button class="header-icon-btn" id="toolsToggleBtn" onclick="togglePanel('tools')" title="工具栏">&#128295;</button>
+            <button class="header-icon-btn" id="logToggleBtn" onclick="togglePanel('log')" title="每日进度">&#128203;</button>
+            <button class="reset-btn" onclick="resetChapter()">重置</button>
+        </div>
+    </header>
+
+    <!-- 工具面板（可折叠） -->
+    <div class="collapse-panel" id="toolsPanel">
+        <div class="collapse-panel-inner">
+            <div class="toolbar-inner">
+                <div class="toolbar-left">
+                    <div class="search-box">
+                        <span class="search-icon">&#128269;</span>
+                        <input type="text" class="search-input" id="searchInput" placeholder="搜索单词或释义...">
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <button class="toolbar-btn" id="wordbookBtn" onclick="toggleWordbook()">
+                        &#128278; 生词本 <span class="badge" id="wordbookCount">0</span>
+                    </button>
+                    <button class="toolbar-btn" id="mistakesBtn" onclick="toggleMistakes()">
+                        &#10060; 错题本 <span class="badge" id="mistakesCount">0</span>
+                    </button>
+                    <button class="toolbar-btn" id="spellingBtn" onclick="toggleSpellingMode()">
+                        &#9997; 拼写测试
+                    </button>
+                    <button class="toolbar-btn" id="ebbinghausBtn" onclick="toggleEbbinghausMode()">
+                        &#128197; 复习计划
+                    </button>
+                    <button class="toolbar-btn" onclick="exportData()">
+                        &#128228; 导出
+                    </button>
+                    <button class="toolbar-btn" onclick="importData()">
+                        &#128229; 导入
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- 工具栏 -->
-    <div class="toolbar">
-        <div class="toolbar-left">
-            <div class="search-box">
-                <span class="search-icon">&#128269;</span>
-                <input type="text" class="search-input" id="searchInput" placeholder="搜索单词或释义...">
-            </div>
-        </div>
-        <div class="toolbar-right">
-            <button class="toolbar-btn" id="wordbookBtn" onclick="toggleWordbook()">
-                &#128278; 生词本 <span class="badge" id="wordbookCount">0</span>
-            </button>
-            <button class="toolbar-btn" id="mistakesBtn" onclick="toggleMistakes()">
-                &#10060; 错题本 <span class="badge" id="mistakesCount">0</span>
-            </button>
-            <button class="toolbar-btn" id="spellingBtn" onclick="toggleSpellingMode()">
-                &#9997; 拼写测试
-            </button>
-            <button class="toolbar-btn" id="ebbinghausBtn" onclick="toggleEbbinghausMode()">
-                &#128197; 复习计划
-            </button>
-            <button class="toolbar-btn" onclick="exportData()">
-                &#128228; 导出
-            </button>
-            <button class="toolbar-btn" onclick="importData()">
-                &#128229; 导入
-            </button>
-        </div>
-    </div>
-
-    <!-- 每日进度追踪日志 -->
-    <div class="daily-log-panel" id="dailyLogPanel">
-        <div class="daily-log-header" onclick="toggleDailyLog()">
-            <div class="daily-log-title">
-                <span>&#128203;</span> 每日进度日志
-                <span id="logTodayStatus" style="font-size:0.85rem;font-weight:400;color:#8a8578;margin-left:8px;"></span>
-            </div>
-            <span class="daily-log-toggle" id="logToggle">&#9660;</span>
-        </div>
-        <div class="daily-log-content" id="logContent">
+    <!-- 每日进度日志面板（可折叠） -->
+    <div class="collapse-panel" id="logPanel">
+        <div class="collapse-panel-inner">
             <div class="log-date-nav">
                 <button class="log-date-btn" onclick="changeLogDate(-1)">&#9664; 前一天</button>
                 <span class="log-date-display" id="logDateDisplay"></span>
@@ -1195,138 +1436,137 @@
         </div>
     </div>
 
-    <!-- 熟练度筛选 -->
-    <div class="filter-bar" id="filterBar">
-        <button class="filter-btn active" data-filter="all" onclick="filterByMastery('all')">
-            全部 <span class="filter-count" id="filterAll">0</span>
-        </button>
-        <button class="filter-btn" data-filter="0" onclick="filterByMastery('0')">
-            未学习 <span class="filter-count" id="filter0">0</span>
-        </button>
-        <button class="filter-btn" data-filter="1" onclick="filterByMastery('1')">
-            初学 <span class="filter-count" id="filter1">0</span>
-        </button>
-        <button class="filter-btn" data-filter="2" onclick="filterByMastery('2')">
-            记忆中 <span class="filter-count" id="filter2">0</span>
-        </button>
-        <button class="filter-btn" data-filter="3" onclick="filterByMastery('3')">
-            已掌握 <span class="filter-count" id="filter3">0</span>
-        </button>
-    </div>
-
-    <!-- 拼写测试模式 -->
-    <div class="spelling-mode" id="spellingMode">
-        <div class="spelling-card">
-            <div class="spelling-hint" id="spellingHint">请根据释义拼写单词</div>
-            <input type="text" class="spelling-input" id="spellingInput" placeholder="输入英文单词..." autocomplete="off" autocapitalize="off" spellcheck="false">
-            <div class="spelling-feedback" id="spellingFeedback"></div>
-            <div class="spelling-answer" id="spellingAnswer"></div>
-            <div class="spelling-actions">
-                <button class="spelling-btn primary" id="spellingSubmit" onclick="checkSpelling()">确认</button>
-                <button class="spelling-btn secondary" id="spellingSkip" onclick="skipSpelling()">跳过</button>
-                <button class="spelling-btn secondary" onclick="exitSpellingMode()">退出拼写</button>
+    <!-- 单词列表弹窗（生词本/错题本） -->
+    <div class="word-list-modal" id="wordListModal">
+        <div class="word-list-container">
+            <div class="word-list-header">
+                <span class="word-list-title" id="wordListTitle">单词列表</span>
+                <button class="word-list-close" onclick="hideWordList()">&times;</button>
             </div>
+            <div class="word-list-content" id="wordListContent"></div>
         </div>
     </div>
 
-    <!-- 艾宾浩斯复习模式 -->
-    <div class="ebbinghaus-mode" id="ebbinghausMode">
-        <div class="ebbinghaus-card">
-            <div class="ebbinghaus-header">
-                <div class="ebbinghaus-title">艾宾浩斯复习计划</div>
-                <div class="ebbinghaus-stats">
-                    <div class="ebbinghaus-stat">待复习: <span id="ebbinghausPending">0</span></div>
-                    <div class="ebbinghaus-stat">已完成: <span id="ebbinghausCompleted">0</span></div>
+    <div class="app-body">
+        <!-- 左侧章节目录 -->
+        <aside class="sidebar" id="chapterSidebar">
+            <div class="sidebar-header">
+                <span>&#128214; 章节</span>
+                <span style="font-size:12px;color:var(--text-sub);">共40章</span>
+            </div>
+            <div class="list-container" id="chapterList"></div>
+        </aside>
+
+        <!-- 中间舞台 -->
+        <main class="stage">
+            <!-- 熟练度筛选 -->
+            <div class="filter-bar" id="filterBar">
+                <button class="filter-btn active" data-filter="all" onclick="filterByMastery('all')">
+                    全部 <span class="filter-count" id="filterAll">0</span>
+                </button>
+                <button class="filter-btn" data-filter="0" onclick="filterByMastery('0')">
+                    未学习 <span class="filter-count" id="filter0">0</span>
+                </button>
+                <button class="filter-btn" data-filter="1" onclick="filterByMastery('1')">
+                    初学 <span class="filter-count" id="filter1">0</span>
+                </button>
+                <button class="filter-btn" data-filter="2" onclick="filterByMastery('2')">
+                    记忆中 <span class="filter-count" id="filter2">0</span>
+                </button>
+                <button class="filter-btn" data-filter="3" onclick="filterByMastery('3')">
+                    已掌握 <span class="filter-count" id="filter3">0</span>
+                </button>
+            </div>
+
+            <!-- 拼写测试模式 -->
+            <div class="spelling-mode" id="spellingMode">
+                <div class="spelling-card">
+                    <div class="spelling-hint" id="spellingHint">请根据释义拼写单词</div>
+                    <input type="text" class="spelling-input" id="spellingInput" placeholder="输入英文单词..." autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <div class="spelling-feedback" id="spellingFeedback"></div>
+                    <div class="spelling-answer" id="spellingAnswer"></div>
+                    <div class="spelling-actions">
+                        <button class="spelling-btn primary" id="spellingSubmit" onclick="checkSpelling()">确认</button>
+                        <button class="spelling-btn secondary" id="spellingSkip" onclick="skipSpelling()">跳过</button>
+                        <button class="spelling-btn secondary" onclick="exitSpellingMode()">退出拼写</button>
+                    </div>
                 </div>
             </div>
-            <div class="ebbinghaus-list" id="ebbinghausList">
-                <div class="ebbinghaus-empty">加载中...</div>
-            </div>
-            <div class="ebbinghaus-actions">
-                <button class="spelling-btn primary" onclick="startEbbinghausReview()">开始复习</button>
-                <button class="spelling-btn secondary" onclick="exitEbbinghausMode()">退出</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 统计面板 -->
-    <div class="stats-panel">
-        <div class="stat-card">
-            <div class="stat-value" id="totalCount">0</div>
-            <div class="stat-label">本章总数</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="learnedCount">0</div>
-            <div class="stat-label">已掌握</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="learningCount">0</div>
-            <div class="stat-label">学习中</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="accuracy">0%</div>
-            <div class="stat-label">正确率</div>
-        </div>
-    </div>
-
-    <!-- 进度条 -->
-    <div class="progress-container">
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-        </div>
-        <div class="progress-text" id="progressText">0 / 0</div>
-    </div>
-
-    <!-- 单词卡片 -->
-    <div class="card-container" id="cardContainer">
-        <div class="card" id="card" onclick="flipCard()">
-            <div class="card-face card-front">
-                <div class="mastery-indicator" id="masteryIndicator">
-                    <div class="mastery-dot"></div>
-                    <div class="mastery-dot"></div>
-                    <div class="mastery-dot"></div>
+            <!-- 艾宾浩斯复习模式 -->
+            <div class="ebbinghaus-mode" id="ebbinghausMode">
+                <div class="ebbinghaus-card">
+                    <div class="ebbinghaus-header">
+                        <div class="ebbinghaus-title">艾宾浩斯复习计划</div>
+                        <div class="ebbinghaus-stats">
+                            <div class="ebbinghaus-stat">待复习: <span id="ebbinghausPending">0</span></div>
+                            <div class="ebbinghaus-stat">已完成: <span id="ebbinghausCompleted">0</span></div>
+                        </div>
+                    </div>
+                    <div class="ebbinghaus-list" id="ebbinghausList">
+                        <div class="ebbinghaus-empty">加载中...</div>
+                    </div>
+                    <div class="ebbinghaus-actions">
+                        <button class="spelling-btn primary" onclick="startEbbinghausReview()">开始复习</button>
+                        <button class="spelling-btn secondary" onclick="exitEbbinghausMode()">退出</button>
+                    </div>
                 </div>
-                <div class="word-display" id="wordDisplay">Loading...</div>
             </div>
-            <div class="card-face card-back">
-                <div class="review-badge" id="reviewBadge">新词</div>
-                <div class="definition-display" id="definitionDisplay"></div>
-            </div>
-        </div>
-    </div>
 
-    <!-- 操作按钮 -->
-    <div class="action-buttons" id="actionButtons">
-        <button class="action-btn dont-know-btn" onclick="markAsUnknown()">
-            <span>❌</span>
-            <span>不认识</span>
-        </button>
-        <button class="action-btn know-btn" onclick="markAsKnown()">
-            <span>✅</span>
-            <span>认识</span>
-        </button>
-    </div>
+            <!-- 单词卡片 -->
+            <div class="card-wrapper">
+                <div class="card" id="card" onclick="flipCard()">
+                    <div class="card-face card-front">
+                        <div class="mastery-indicator" id="masteryIndicator">
+                            <div class="mastery-dot"></div>
+                            <div class="mastery-dot"></div>
+                            <div class="mastery-dot"></div>
+                        </div>
+                        <div class="word-display" id="wordDisplay">Loading...</div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="review-badge" id="reviewBadge">新词</div>
+                        <div class="definition-display" id="definitionDisplay"></div>
+                    </div>
+                </div>
+            </div>
 
-    <!-- 完成界面 -->
-    <div class="finished-screen" id="finishedScreen">
-        <div class="finished-icon">🎉</div>
-        <div class="finished-title">太棒了！</div>
-        <div class="finished-subtitle">本章单词已全部掌握</div>
-        <div class="finished-stats">
-            <div class="finished-stat">
-                <div class="finished-stat-value" id="finishedTotal">0</div>
-                <div class="finished-stat-label">总单词数</div>
+            <!-- 操作按钮 -->
+            <div class="action-buttons" id="actionButtons">
+                <button class="action-btn dont-know-btn" onclick="markAsUnknown()">
+                    <span>❌</span>
+                    <span>不认识</span>
+                </button>
+                <button class="action-btn know-btn" onclick="markAsKnown()">
+                    <span>✅</span>
+                    <span>认识</span>
+                </button>
             </div>
-            <div class="finished-stat">
-                <div class="finished-stat-value" id="finishedAccuracy">0%</div>
-                <div class="finished-stat-label">正确率</div>
+
+            <!-- 完成界面 -->
+            <div class="finished-screen" id="finishedScreen">
+                <div class="finished-icon">🎉</div>
+                <div class="finished-title">太棒了！</div>
+                <div class="finished-subtitle">本章单词已全部掌握</div>
+                <div class="finished-stats">
+                    <div class="finished-stat">
+                        <div class="finished-stat-value" id="finishedTotal">0</div>
+                        <div class="finished-stat-label">总单词数</div>
+                    </div>
+                    <div class="finished-stat">
+                        <div class="finished-stat-value" id="finishedAccuracy">0%</div>
+                        <div class="finished-stat-label">正确率</div>
+                    </div>
+                    <div class="finished-stat">
+                        <div class="finished-stat-value" id="finishedReview">0</div>
+                        <div class="finished-stat-label">复习次数</div>
+                    </div>
+                </div>
+                <button class="restart-btn" onclick="resetChapter()">再来一遍</button>
             </div>
-            <div class="finished-stat">
-                <div class="finished-stat-value" id="finishedReview">0</div>
-                <div class="finished-stat-label">复习次数</div>
-            </div>
-        </div>
-        <button class="restart-btn" onclick="resetChapter()">再来一遍</button>
+
+            <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+        </main>
     </div>
 
 <script>
@@ -3618,6 +3858,9 @@ const allLessons = {
 
 // 全局状态
 let currentChapter = 1;
+let currentMode = 'en2zh'; // 学习模式: 'en2zh' 或 'zh2en'
+let cardFlipped = false; // 卡片是否处于背面
+let isAnimating = false; // 是否正在动画中
 let studyQueue = [];
 let currentIndex = 0;
 let wordStats = {}; // 单词熟练度记录
@@ -3629,14 +3872,11 @@ let showingMistakes = false; // 是否显示错题本
 
 // DOM元素
 const card = document.getElementById('card');
-const cardContainer = document.getElementById('cardContainer');
+const cardWrapper = document.querySelector('.card-wrapper');
 const wordDisplay = document.getElementById('wordDisplay');
 const definitionDisplay = document.getElementById('definitionDisplay');
 const masteryIndicator = document.getElementById('masteryIndicator');
 const reviewBadge = document.getElementById('reviewBadge');
-const chapterSelect = document.getElementById('chapterSelect');
-const progressFill = document.getElementById('progressFill');
-const progressText = document.getElementById('progressText');
 const finishedScreen = document.getElementById('finishedScreen');
 const actionButtons = document.getElementById('actionButtons');
 const searchInput = document.getElementById('searchInput');
@@ -3774,8 +4014,6 @@ function generateStudyQueue(words) {
 
 // 初始化章节
 async function initChapter() {
-    currentChapter = parseInt(chapterSelect.value);
-
     const saved = await loadProgress();
     const words = allLessons[currentChapter] || [];
 
@@ -3792,11 +4030,12 @@ async function initChapter() {
     }
 
     finishedScreen.classList.remove('show');
-    cardContainer.style.display = 'block';
+    cardWrapper.style.display = 'flex';
     actionButtons.style.display = 'flex';
 
     showCurrentCard();
     updateStats();
+    updateChapterActive();
     await saveProgress();
 }
 
@@ -3808,8 +4047,13 @@ function showCurrentCard() {
     }
 
     const item = studyQueue[currentIndex];
-    wordDisplay.textContent = item.en;
-    definitionDisplay.textContent = item.zh;
+    if (currentMode === 'en2zh') {
+        wordDisplay.textContent = item.en;
+        definitionDisplay.textContent = item.zh;
+    } else {
+        wordDisplay.textContent = item.zh;
+        definitionDisplay.textContent = item.en;
+    }
 
     // 更新熟练度指示器
     const mastery = wordStats[item.en]?.mastery || 0;
@@ -3827,22 +4071,45 @@ function showCurrentCard() {
         reviewBadge.style.display = 'block';
     }
 
-    // 重置卡片状态：先禁用动画，瞬间切回正面，再恢复动画
-    // 防止从释义面翻页时，新单词的释义在翻转动画中短暂可见
-    card.classList.add('no-transition');
-    card.classList.remove('flipped');
-    void card.offsetWidth; // 强制浏览器重绘，确保 no-transition 生效
-    card.classList.remove('no-transition');
+    // 如果卡片在背面，瞬间切回正面（无动画，防止内容泄露）
+    if (cardFlipped) {
+        gsap.set(card, { rotationY: 0 });
+        cardFlipped = false;
+    }
+    isAnimating = false;
 
-    // 更新进度
-    const progress = ((currentIndex + 1) / studyQueue.length) * 100;
-    progressFill.style.width = progress + '%';
-    progressText.textContent = `${currentIndex + 1} / ${studyQueue.length}`;
+    // 卡片入场动画：轻微缩放 + 淡入
+    gsap.fromTo(card,
+        { scale: 0.92, opacity: 0.6 },
+        { scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.7)' }
+    );
 }
 
-// 翻转卡片
+// 翻转卡片 (GSAP 驱动)
+// 正面→背面: 动画翻转; 背面→正面: 瞬间切回，防止释义内容泄露
 function flipCard() {
-    card.classList.toggle('flipped');
+    if (isAnimating || currentIndex >= studyQueue.length) return;
+
+    if (cardFlipped) {
+        // 从背面切回正面 — 瞬间完成，无过渡动画
+        gsap.set(card, { rotationY: 0 });
+        cardFlipped = false;
+    } else {
+        // 从正面翻到背面 — 带弹性缓动的翻转动画
+        isAnimating = true;
+        const frontFace = card.querySelector('.card-front');
+        const backFace = card.querySelector('.card-back');
+
+        gsap.to(card, {
+            rotationY: 180,
+            duration: 0.7,
+            ease: 'back.out(1.4)',
+            onComplete: () => {
+                cardFlipped = true;
+                isAnimating = false;
+            }
+        });
+    }
 }
 
 // 朗读单词
@@ -3879,6 +4146,13 @@ function markAsKnown() {
     }
 
     currentIndex++;
+
+    // GSAP 正确反馈：绿色光晕
+    gsap.fromTo(card,
+        { boxShadow: '0 0 0 0 rgba(16, 185, 129, 0.5)' },
+        { boxShadow: '0 0 40px 12px rgba(16, 185, 129, 0)', duration: 0.7, ease: 'power2.out' }
+    );
+
     showCurrentCard();
     updateStats();
     saveProgress();
@@ -3914,6 +4188,14 @@ function markAsUnknown() {
     studyQueue.splice(insertPos, 0, {...item, isReview: true});
 
     currentIndex++;
+
+    // GSAP 错误反馈：红色抖动
+    gsap.to(card, {
+        x: [-10, 10, -8, 8, -4, 4, 0],
+        duration: 0.45,
+        ease: 'power2.out'
+    });
+
     showCurrentCard();
     updateStats();
     saveProgress();
@@ -3938,19 +4220,29 @@ function updateStats() {
         }
     });
 
-    document.getElementById('totalCount').textContent = totalWords;
-    document.getElementById('learnedCount').textContent = learned;
-    document.getElementById('learningCount').textContent = learning;
-
-    const accuracy = sessionStats.total > 0
-        ? Math.round((sessionStats.correct / sessionStats.total) * 100)
-        : 0;
-    document.getElementById('accuracy').textContent = accuracy + '%';
+    // 更新筛选栏的计数（替代原有的统计面板）
+    document.getElementById('filterAll').textContent = totalWords;
+    
+    // 计算各熟练度的数量
+    const counts = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    words.forEach(w => {
+        const stat = wordStats[w.en];
+        if (stat && stat.mastery !== undefined) {
+            counts[stat.mastery]++;
+        } else {
+            counts[0]++; // 未学习
+        }
+    });
+    
+    document.getElementById('filter0').textContent = counts[0];
+    document.getElementById('filter1').textContent = counts[1];
+    document.getElementById('filter2').textContent = counts[2];
+    document.getElementById('filter3').textContent = counts[3];
 }
 
 // 显示完成界面
 function showFinished() {
-    cardContainer.style.display = 'none';
+    cardWrapper.style.display = 'none';
     actionButtons.style.display = 'none';
     finishedScreen.classList.add('show');
 
@@ -3992,10 +4284,76 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// 章节切换
-chapterSelect.addEventListener('change', async () => {
+// ========== 章节列表（左侧边栏） ==========
+function initChapterList() {
+    const list = document.getElementById('chapterList');
+    list.innerHTML = '';
+    const chapters = Object.keys(allLessons).map(Number).sort((a, b) => a - b);
+    chapters.forEach(ch => {
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        div.id = `chapter-nav-${ch}`;
+        if (ch === currentChapter) div.classList.add('active');
+        const words = allLessons[ch] || [];
+        div.innerHTML = `<span>第${ch}章</span><span style="font-size:12px;color:#94a3b8;">${words.length}词</span>`;
+        div.onclick = () => selectChapter(ch);
+        list.appendChild(div);
+    });
+    // GSAP 交错入场动画
+    gsap.fromTo('#chapterList .list-item',
+        { opacity: 0, x: -20 },
+        { opacity: 1, x: 0, duration: 0.3, stagger: 0.02, ease: 'power2.out' }
+    );
+}
+
+async function selectChapter(ch) {
+    if (ch === currentChapter) return;
+    currentChapter = ch;
     await initChapter();
-});
+    showCurrentCard();
+    updateFilterCounts();
+    initChapterList();
+    updateChapterActive();
+    if (window.innerWidth <= 768) closeSidebar();
+}
+
+function updateChapterActive() {
+    document.querySelectorAll('#chapterList .list-item').forEach(el => el.classList.remove('active'));
+    const active = document.getElementById(`chapter-nav-${currentChapter}`);
+    if (active) active.classList.add('active');
+}
+
+// ========== 侧边栏控制 ==========
+function toggleSidebar() {
+    const sidebar = document.getElementById('chapterSidebar');
+    const overlay = document.getElementById('overlay');
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('mobile-open');
+        overlay.classList.toggle('show');
+    } else {
+        sidebar.classList.toggle('collapsed');
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('chapterSidebar');
+    const overlay = document.getElementById('overlay');
+    sidebar.classList.remove('mobile-open');
+    sidebar.classList.remove('collapsed');
+    overlay.classList.remove('show');
+}
+
+// ========== 学习模式切换 ==========
+function setMode(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (cardFlipped) {
+        gsap.set(document.getElementById('card'), { rotationY: 0 });
+        cardFlipped = false;
+    }
+    showCurrentCard();
+}
 
 // 页面加载完成
 window.addEventListener('DOMContentLoaded', async () => {
@@ -4003,6 +4361,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await waitForApi(3000);
     console.log('PyWebView API 就绪:', isPyWebView());
 
+    initChapterList();
     await initChapter();
     await loadWordbookAndMistakes();
     setupSearch();
@@ -4141,8 +4500,8 @@ function renderWordList(words, title) {
         listDiv.appendChild(table);
     }
 
-    const toolbar = document.querySelector('.toolbar');
-    toolbar.parentNode.insertBefore(listDiv, toolbar.nextSibling);
+    const filterBar = document.getElementById('filterBar');
+    filterBar.parentNode.insertBefore(listDiv, filterBar);
 }
 
 function hideWordList() {
@@ -4232,8 +4591,8 @@ function renderSearchResults(words, query) {
         listDiv.appendChild(table);
     }
 
-    const toolbar = document.querySelector('.toolbar');
-    toolbar.parentNode.insertBefore(listDiv, toolbar.nextSibling);
+    const filterBar = document.getElementById('filterBar');
+    filterBar.parentNode.insertBefore(listDiv, filterBar);
 }
 
 // 朗读指定文本
@@ -4350,7 +4709,7 @@ function toggleSpellingMode() {
 
 function startSpellingMode() {
     // 隐藏普通卡片模式
-    cardContainer.style.display = 'none';
+    cardWrapper.style.display = 'none';
     actionButtons.style.display = 'none';
     finishedScreen.classList.remove('show');
     hideWordList();
@@ -4373,7 +4732,7 @@ function exitSpellingMode() {
     document.getElementById('spellingMode').classList.remove('active');
 
     // 恢复普通卡片模式
-    cardContainer.style.display = 'block';
+    cardWrapper.style.display = 'flex';
     actionButtons.style.display = 'flex';
     showCurrentCard();
 }
@@ -4525,7 +4884,7 @@ function toggleEbbinghausMode() {
 
 async function startEbbinghausMode() {
     // 隐藏其他模式
-    cardContainer.style.display = 'none';
+    cardWrapper.style.display = 'none';
     actionButtons.style.display = 'none';
     finishedScreen.classList.remove('show');
     hideWordList();
@@ -4544,7 +4903,7 @@ function exitEbbinghausMode() {
     document.getElementById('ebbinghausMode').classList.remove('active');
 
     // 恢复普通卡片模式
-    cardContainer.style.display = 'block';
+    cardWrapper.style.display = 'flex';
     actionButtons.style.display = 'flex';
     showCurrentCard();
 }
@@ -4765,7 +5124,7 @@ async function filterByMastery(level) {
     if (ebbinghausMode) exitEbbinghausMode();
 
     // 显示卡片
-    cardContainer.style.display = 'block';
+    cardWrapper.style.display = 'flex';
     actionButtons.style.display = 'flex';
     finishedScreen.classList.remove('show');
 
@@ -4853,12 +5212,13 @@ async function saveDailyLog() {
     }
 }
 
-// 切换日志面板展开/收起
-function toggleDailyLog() {
-    const content = document.getElementById('logContent');
-    const toggle = document.getElementById('logToggle');
-    content.classList.toggle('show');
-    toggle.classList.toggle('open');
+// 切换面板展开/收起（tools / log）
+function togglePanel(name) {
+    const panel = document.getElementById(name + 'Panel');
+    const btn = document.getElementById(name + 'ToggleBtn');
+    if (!panel || !btn) return;
+    const isOpen = panel.classList.toggle('show');
+    btn.classList.toggle('active', isOpen);
 }
 
 // 切换日期
@@ -4969,10 +5329,9 @@ function removeLogEntry(index) {
 function updateTodayStatus() {
     const today = getTodayStr();
     const todayLog = getLogForDate(today);
-    const statusEl = document.getElementById('logTodayStatus');
+    const summaryEl = document.getElementById('logSummary');
 
     if (todayLog.entries.length === 0) {
-        statusEl.textContent = '';
         return;
     }
 
@@ -4980,11 +5339,9 @@ function updateTodayStatus() {
     const total = todayLog.entries.length;
 
     if (done >= total) {
-        statusEl.textContent = '✅ 今日计划已完成';
-        statusEl.style.color = '#5a7a5a';
+        summaryEl.textContent = '✅ 今日计划已完成';
     } else {
-        statusEl.textContent = `(${done}/${total} 已完成)`;
-        statusEl.style.color = '#8a8578';
+        summaryEl.textContent = `📋 今日进度: ${done}/${total} 已完成`;
     }
 }
 
@@ -5057,3 +5414,6 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
+
+
+
