@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -70,6 +70,8 @@
             background: var(--bg-body);
             margin: 0;
             height: 100vh;
+            height: 100dvh;
+            min-height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
             color: var(--text-main);
@@ -195,7 +197,7 @@
             flex-direction: column;
             width: 280px;
             flex-shrink: 0;
-            z-index: 30;
+            z-index: 40;
             transition: margin var(--trans-speed) cubic-bezier(0.4, 0, 0.2, 1);
             border-right: 1px solid var(--border);
         }
@@ -215,6 +217,7 @@
         .list-container {
             flex: 1;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 10px;
             scroll-behavior: smooth;
         }
@@ -244,6 +247,7 @@
         .stage {
             flex: 1;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
             background: var(--bg-body);
@@ -1010,6 +1014,7 @@
             justify-content: center;
             gap: 20px;
             padding: 0 24px 28px;
+            padding-bottom: calc(28px + env(safe-area-inset-bottom));
             flex-shrink: 0;
         }
 
@@ -1351,20 +1356,27 @@
                 box-shadow: 0 0 30px rgba(0,0,0,0.1);
             }
             .sidebar.mobile-open { margin-left: 0; }
-            .card { aspect-ratio: auto; height: 62vh; max-height: none; }
+            .card { aspect-ratio: auto; height: auto; max-height: 55vh; min-height: 200px; }
             .word-display { font-size: 42px; }
             .definition-display { font-size: 24px; }
         }
 
         @media (max-width: 600px) {
-            .app-header { padding: 0 16px; height: 56px; }
-            .header-title { font-size: 14px; }
-            .card { max-height: 50vh; }
-            .action-buttons { gap: 12px; padding: 0 16px 20px; }
-            .action-btn { height: 56px; font-size: 13px; }
+            .app-header { padding: 0 10px; height: 52px; gap: 8px; }
+            .header-group { gap: 8px; }
+            .header-title { font-size: 13px; white-space: nowrap; }
+            .header-icon-btn { width: 34px; height: 34px; font-size: 14px; }
+            .mode-switch { padding: 3px; }
+            .mode-btn { padding: 5px 10px; font-size: 12px; }
+            .reset-btn { padding: 6px 12px; font-size: 12px; }
+            .card { max-height: 48vh; min-height: 180px; }
+            .action-buttons { gap: 12px; padding: 0 12px 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+            .action-btn { height: 52px; font-size: 13px; }
             .action-btn span:first-child { font-size: 18px; }
             .finished-stats { flex-direction: column; gap: 12px; }
             .finished-stat { padding: 16px 24px; }
+            .filter-bar { padding: 10px 12px; gap: 6px; }
+            .filter-btn { padding: 8px 12px; font-size: 12px; }
         }
 
         /* ========== 滚动条美化 ========== */
