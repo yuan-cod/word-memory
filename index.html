@@ -1484,7 +1484,7 @@
         <div class="word-list-container">
             <div class="word-list-header">
                 <span class="word-list-title" id="wordListTitle">单词列表</span>
-                <button class="word-list-close" onclick="hideWordList()">&times;</button>
+                <button class="word-list-close" onclick="closeAllTools(); showCurrentCard();">&times;</button>
             </div>
             <div class="word-list-content" id="wordListContent"></div>
         </div>
@@ -4378,17 +4378,53 @@ async function removeFromWordbook(wordEn) {
     }
 }
 
-function toggleWordbook() {
-    showingWordbook = !showingWordbook;
+// ========== 统一关闭所有工具面板 ==========
+function closeAllTools() {
+    // 关闭单词列表（生词本/错题本/搜索结果）
+    const existing = document.getElementById('wordListPanel');
+    if (existing) existing.remove();
+    showingWordbook = false;
     showingMistakes = false;
-    wordbookBtn.classList.toggle('active', showingWordbook);
+    wordbookBtn.classList.remove('active');
     mistakesBtn.classList.remove('active');
 
-    if (showingWordbook) {
-        renderWordList(wordbook, '生词本');
-    } else {
-        hideWordList();
+    // 关闭拼写测试模式
+    if (spellingMode) {
+        spellingMode = false;
+        spellingBtn.classList.remove('active');
+        document.getElementById('spellingMode').classList.remove('active');
     }
+
+    // 关闭艾宾浩斯复习模式
+    if (ebbinghausMode) {
+        ebbinghausMode = false;
+        ebbinghausBtn.classList.remove('active');
+        document.getElementById('ebbinghausMode').classList.remove('active');
+    }
+
+    // 恢复卡片区域和操作按钮的显示
+    const cardWrapper = document.querySelector('.card-wrapper');
+    const actionButtons = document.getElementById('actionButtons');
+    const finishedScreen = document.getElementById('finishedScreen');
+    const filterBar = document.getElementById('filterBar');
+    if (cardWrapper) cardWrapper.style.display = '';
+    if (actionButtons) actionButtons.style.display = '';
+    if (finishedScreen) finishedScreen.style.display = '';
+    if (filterBar) filterBar.style.display = '';
+}
+
+function toggleWordbook() {
+    // 如果已经打开，则关闭
+    if (showingWordbook) {
+        closeAllTools();
+        showCurrentCard();
+        return;
+    }
+    // 关闭其他工具
+    closeAllTools();
+    showingWordbook = true;
+    wordbookBtn.classList.add('active');
+    renderWordList(wordbook, '生词本');
 }
 
 // ========== 错题本功能 ==========
@@ -4418,35 +4454,38 @@ async function removeFromMistakes(wordEn) {
 }
 
 function toggleMistakes() {
-    showingMistakes = !showingMistakes;
-    showingWordbook = false;
-    mistakesBtn.classList.toggle('active', showingMistakes);
-    wordbookBtn.classList.remove('active');
-
+    // 如果已经打开，则关闭
     if (showingMistakes) {
-        renderWordList(mistakes, '错题本');
-    } else {
-        hideWordList();
+        closeAllTools();
+        showCurrentCard();
+        return;
     }
+    // 关闭其他工具
+    closeAllTools();
+    showingMistakes = true;
+    mistakesBtn.classList.add('active');
+    renderWordList(mistakes, '错题本');
 }
 
 // ========== 单词列表显示 ==========
 function renderWordList(words, title) {
-    hideWordList();
+    // 仅移除已存在的面板，不重置标志位
+    const existing = document.getElementById('wordListPanel');
+    if (existing) existing.remove();
 
     const listDiv = document.createElement('div');
     listDiv.id = 'wordListPanel';
     listDiv.style.cssText = `
         width: 100%; max-width: 1000px; background: rgba(255,255,255,0.95);
         border-radius: 16px; padding: 20px; margin-bottom: 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-height: 400px; overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1); flex: 1; min-height: 0; overflow-y: auto;
     `;
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;';
     header.innerHTML = `
         <h3 style="font-size:1.2rem; color:#2d3748;">${title} (${words.length}个)</h3>
-        <button onclick="hideWordList()" style="padding:6px 12px; border:none; background:#e2e8f0; border-radius:8px; cursor:pointer;">关闭</button>
+        <button onclick="closeAllTools(); showCurrentCard();" style="padding:6px 12px; border:none; background:#e2e8f0; border-radius:8px; cursor:pointer;">关闭</button>
     `;
     listDiv.appendChild(header);
 
@@ -4484,15 +4523,21 @@ function renderWordList(words, title) {
 
     const filterBar = document.getElementById('filterBar');
     filterBar.parentNode.insertBefore(listDiv, filterBar);
+
+    // 隐藏卡片区域和操作按钮，避免挤压单词列表空间
+    const cardWrapper = document.querySelector('.card-wrapper');
+    const actionButtons = document.getElementById('actionButtons');
+    const finishedScreen = document.getElementById('finishedScreen');
+    if (cardWrapper) cardWrapper.style.display = 'none';
+    if (actionButtons) actionButtons.style.display = 'none';
+    if (finishedScreen) finishedScreen.style.display = 'none';
+    filterBar.style.display = 'none';
 }
 
 function hideWordList() {
-    const existing = document.getElementById('wordListPanel');
-    if (existing) existing.remove();
-    showingWordbook = false;
-    showingMistakes = false;
-    wordbookBtn.classList.remove('active');
-    mistakesBtn.classList.remove('active');
+    // 向后兼容：委托给 closeAllTools
+    closeAllTools();
+    showCurrentCard();
 }
 
 // ========== 搜索功能 ==========
@@ -4500,7 +4545,8 @@ function setupSearch() {
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim().toLowerCase();
         if (query.length === 0) {
-            hideWordList();
+            closeAllTools();
+            showCurrentCard();
             return;
         }
         searchWords(query);
@@ -4520,21 +4566,23 @@ function searchWords(query) {
 }
 
 function renderSearchResults(words, query) {
-    hideWordList();
+    // 仅移除已存在的面板，不重置标志位
+    const existing = document.getElementById('wordListPanel');
+    if (existing) existing.remove();
 
     const listDiv = document.createElement('div');
     listDiv.id = 'wordListPanel';
     listDiv.style.cssText = `
         width: 100%; max-width: 1000px; background: rgba(255,255,255,0.95);
         border-radius: 16px; padding: 20px; margin-bottom: 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-height: 400px; overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1); flex: 1; min-height: 0; overflow-y: auto;
     `;
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;';
     header.innerHTML = `
         <h3 style="font-size:1.2rem; color:#2d3748;">搜索 "${query}" (${words.length}个结果)</h3>
-        <button onclick="hideWordList(); searchInput.value='';" style="padding:6px 12px; border:none; background:#e2e8f0; border-radius:8px; cursor:pointer;">关闭</button>
+        <button onclick="closeAllTools(); searchInput.value=''; showCurrentCard();" style="padding:6px 12px; border:none; background:#e2e8f0; border-radius:8px; cursor:pointer;">关闭</button>
     `;
     listDiv.appendChild(header);
 
@@ -4575,6 +4623,15 @@ function renderSearchResults(words, query) {
 
     const filterBar = document.getElementById('filterBar');
     filterBar.parentNode.insertBefore(listDiv, filterBar);
+
+    // 隐藏卡片区域和操作按钮，避免挤压单词列表空间
+    const cardWrapper = document.querySelector('.card-wrapper');
+    const actionButtons = document.getElementById('actionButtons');
+    const finishedScreen = document.getElementById('finishedScreen');
+    if (cardWrapper) cardWrapper.style.display = 'none';
+    if (actionButtons) actionButtons.style.display = 'none';
+    if (finishedScreen) finishedScreen.style.display = 'none';
+    filterBar.style.display = 'none';
 }
 
 // 朗读指定文本
@@ -4679,14 +4736,17 @@ let spellingIndex = 0;
 let spellingStats = { correct: 0, total: 0 };
 
 function toggleSpellingMode() {
-    spellingMode = !spellingMode;
-    spellingBtn.classList.toggle('active', spellingMode);
-
+    // 如果已经打开，则关闭
     if (spellingMode) {
-        startSpellingMode();
-    } else {
-        exitSpellingMode();
+        closeAllTools();
+        showCurrentCard();
+        return;
     }
+    // 关闭其他工具
+    closeAllTools();
+    spellingMode = true;
+    spellingBtn.classList.add('active');
+    startSpellingMode();
 }
 
 function startSpellingMode() {
@@ -4694,7 +4754,6 @@ function startSpellingMode() {
     cardWrapper.style.display = 'none';
     actionButtons.style.display = 'none';
     finishedScreen.classList.remove('show');
-    hideWordList();
 
     // 显示拼写模式
     document.getElementById('spellingMode').classList.add('active');
@@ -4854,23 +4913,24 @@ const EBBINGHAUS_INTERVALS = [
 ];
 
 function toggleEbbinghausMode() {
-    ebbinghausMode = !ebbinghausMode;
-    ebbinghausBtn.classList.toggle('active', ebbinghausMode);
-
+    // 如果已经打开，则关闭
     if (ebbinghausMode) {
-        startEbbinghausMode();
-    } else {
-        exitEbbinghausMode();
+        closeAllTools();
+        showCurrentCard();
+        return;
     }
+    // 关闭其他工具
+    closeAllTools();
+    ebbinghausMode = true;
+    ebbinghausBtn.classList.add('active');
+    startEbbinghausMode();
 }
 
 async function startEbbinghausMode() {
-    // 隐藏其他模式
+    // 隐藏普通卡片模式
     cardWrapper.style.display = 'none';
     actionButtons.style.display = 'none';
     finishedScreen.classList.remove('show');
-    hideWordList();
-    if (spellingMode) exitSpellingMode();
 
     // 显示艾宾浩斯模式
     document.getElementById('ebbinghausMode').classList.add('active');
@@ -5100,10 +5160,8 @@ async function filterByMastery(level) {
     studyQueue = generateStudyQueue(filteredWords);
     currentIndex = 0;
 
-    // 隐藏其他模式
-    hideWordList();
-    if (spellingMode) exitSpellingMode();
-    if (ebbinghausMode) exitEbbinghausMode();
+    // 关闭所有工具面板
+    closeAllTools();
 
     // 显示卡片
     cardWrapper.style.display = 'flex';
