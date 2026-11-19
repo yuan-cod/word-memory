@@ -296,7 +296,7 @@ function createRow(row, index) {
     <div class="pair-head">
       <span class="pair-index">${String(index + 1).padStart(2, '0')}</span>
       <span class="pair-status"></span>
-      <span class="pair-badge" hidden></span>
+      <button class="pair-badge" type="button" title="点击修改标记" aria-label="修改标记" hidden></button>
       <button class="card-icon pair-bookmark" type="button" aria-label="收藏到生词本" title="收藏到生词本"><svg><use href="#i-bookmark"/></svg></button>
     </div>
     <div class="pair-body">
@@ -345,6 +345,7 @@ function updateRowEl(el, row) {
   badge.hidden = !answered;
   badge.className = `pair-badge${answered ? ` ${answered}` : ''}`;
   badge.textContent = answered === 'known' ? '记住' : answered === 'unknown' ? '不熟' : '';
+  badge.title = answered === 'known' ? '点一下改为「不熟」' : answered === 'unknown' ? '点一下改为「记住」' : '';
 
   const bookmark = el.querySelector('.pair-bookmark');
   bookmark.classList.toggle('active', vocabularyHas(row.en));
@@ -376,7 +377,6 @@ function renderStack() {
 
   renderFinished();
   updateSessionUi();
-  syncPairHeight();
 }
 
 function updateSessionUi() {
@@ -393,6 +393,8 @@ function renderFinished() {
   finished.hidden = !done;
   $('#recallActions').hidden = done;
   $('.keyboard-hint').hidden = done;
+  const dock = $('.study-dock');
+  if (dock) dock.hidden = done;
   if (done) {
     const accuracy = state.session.total ? Math.round(state.session.correct / state.session.total * 100) : 0;
     $('#finishedSummary').textContent = state.session.total
@@ -437,20 +439,13 @@ function rowElAt(index) {
   return $('#wordStackInner')?.children[index] || null;
 }
 
-function syncPairHeight() {
-  const stack = $('#wordStack');
-  if (!stack) return;
-  // 留一点下一张的边，滑动时能看出这是一叠卡片
-  stack.style.setProperty('--pair-height', `${Math.max(220, stack.clientHeight - 40)}px`);
-}
-
 function scrollToRow(index, smooth = true) {
-  const stack = $('#wordStack');
   const el = rowElAt(index);
-  if (!stack || !el) return;
-  const target = el.offsetTop - Math.max(0, (stack.clientHeight - el.offsetHeight) / 2);
-  state.programmaticUntil = Date.now() + (smooth ? 420 : 60);
-  stack.scrollTo({ top: Math.max(0, target), behavior: smooth && !reduceMotion.matches ? 'smooth' : 'auto' });
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const top = window.scrollY + rect.top - Math.max(0, (window.innerHeight - rect.height) / 2);
+  state.programmaticUntil = Date.now() + (smooth ? 500 : 80);
+  window.scrollTo({ top: Math.max(0, top), behavior: smooth && !reduceMotion.matches ? 'smooth' : 'auto' });
 }
 
 function setCurrent(index, { scroll = false } = {}) {
@@ -466,14 +461,12 @@ function setCurrent(index, { scroll = false } = {}) {
 
 function syncCurrentFromScroll() {
   if (state.view !== 'study' || !state.rows.length) return;
-  const stack = $('#wordStack');
-  if (!stack) return;
-  const center = stack.scrollTop + stack.clientHeight / 2;
+  const center = window.innerHeight / 2;
   let best = state.current;
   let bestDistance = Infinity;
   [...$('#wordStackInner').children].forEach((el, index) => {
-    const middle = el.offsetTop + el.offsetHeight / 2;
-    const distance = Math.abs(middle - center);
+    const rect = el.getBoundingClientRect();
+    const distance = Math.abs(rect.top + rect.height / 2 - center);
     if (distance < bestDistance) { bestDistance = distance; best = index; }
   });
   if (best !== state.current) setCurrent(best);
@@ -519,9 +512,12 @@ function advanceToNext() {
   renderFinished();
   const finished = $('#finishedCard');
   if (!finished.hidden) {
-    const stack = $('#wordStack');
-    state.programmaticUntil = Date.now() + 420;
-    stack.scrollTo({ top: finished.offsetTop - 12, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+    const rect = finished.getBoundingClientRect();
+    state.programmaticUntil = Date.now() + 500;
+    window.scrollTo({
+      top: Math.max(0, window.scrollY + rect.top - Math.max(0, (window.innerHeight - rect.height) / 2)),
+      behavior: reduceMotion.matches ? 'auto' : 'smooth'
+    });
   }
 }
 
@@ -537,6 +533,7 @@ function markCurrent(correct) {
 
   const before = masteryOf(row.en);
   const stats = state.stats[row.en] ||= { mastery: 0, correctCount: 0, wrongCount: 0 };
+  stats.baseMastery = before; // 记下答题前的熟练度，改判时从它重算
   stats.mastery = correct ? Math.min(MASTERED, before + 1) : Math.max(0, before - 1);
   const countKey = correct ? 'correctCount' : 'wrongCount';
   stats[countKey] = (stats[countKey] || 0) + 1;
@@ -555,6 +552,42 @@ function markCurrent(correct) {
 
   state.busy = false;
   advanceToNext();
+}
+
+// 点行头徽章改判：已在「不熟 / 记住」之间直接互换，不前进
+function toggleMark(index) {
+  const row = state.rows[index];
+  if (!row || row.locked || !row.answered || state.busy) return;
+  const nextState = row.answered === 'known' ? 'unknown' : 'known';
+  const before = masteryOf(row.en);
+  const stats = state.stats[row.en] ||= { mastery: 0, correctCount: 0, wrongCount: 0 };
+  // 从「答题前的熟练度」重算，来回切换不会越改越偏
+  const base = typeof stats.baseMastery === 'number' ? stats.baseMastery : before;
+  stats.mastery = nextState === 'known'
+    ? Math.min(MASTERED, base + 1)
+    : Math.max(0, base - 1);
+
+  if (nextState === 'known') state.session.correct += 1;
+  else state.session.correct = Math.max(0, state.session.correct - 1);
+
+  row.answered = nextState;
+  row.revealed = true;
+  if (nextState === 'unknown') addToVocabulary(row);
+
+  const el = rowElAt(index);
+  updateRowEl(el, row);
+  if (el) {
+    const badge = el.querySelector('.pair-badge');
+    if (badge) {
+      badge.classList.remove('flip');
+      void badge.offsetWidth;
+      badge.classList.add('flip');
+    }
+  }
+  renderProgress();
+  updateSessionUi();
+  saveProgress();
+  showToast(nextState === 'known' ? '已改为「记住」' : '已改为「不熟」');
 }
 
 /* ---------- 生词本（收藏 + 不熟 合并） ---------- */
@@ -851,6 +884,7 @@ function switchView(view) {
   closeSidebar();
   if (view === 'wordbook') renderWordList();
   if (view === 'spelling') startSpelling();
+  if (view === 'study' && state.rows.length) scrollToRow(state.current, false);
 }
 
 function applyTheme(theme) {
@@ -916,7 +950,7 @@ function bindEvents() {
     if (state.rows.length) { renderStack(); scrollToRow(state.current, false); }
   }));
 
-  $('#wordStack').addEventListener('scroll', () => {
+  window.addEventListener('scroll', () => {
     if (Date.now() < state.programmaticUntil) return;
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(syncCurrentFromScroll, 110);
@@ -926,6 +960,7 @@ function bindEvents() {
     const rowEl = event.target.closest('.word-pair');
     if (!rowEl) return;
     const index = Number(rowEl.dataset.index);
+    if (event.target.closest('.pair-badge')) { toggleMark(index); return; }
     if (event.target.closest('.pair-bookmark')) { toggleBookmark(index); return; }
     const pronunciation = event.target.closest('.pronunciation');
     if (pronunciation) { speak(state.rows[index].en, pronunciation); return; }
@@ -1002,13 +1037,8 @@ function bindEvents() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
   window.addEventListener('resize', () => {
     if (state.view !== 'study') return;
-    syncPairHeight();
     if (state.rows.length) scrollToRow(state.current, false);
   });
-  if ('ResizeObserver' in window) {
-    const stack = $('#wordStack');
-    if (stack) new ResizeObserver(() => { syncPairHeight(); }).observe(stack);
-  }
 }
 
 /* ---------- 启动 ---------- */

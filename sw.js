@@ -1,6 +1,6 @@
 // 考研单词记忆 - Service Worker
 // 网络优先：改了样式/逻辑推上去就能立刻看到；断网时回落到缓存，PWA 仍可离线用。
-const CACHE = 'wordmemory-v6';
+const CACHE = 'wordmemory-v8';
 const FILES = ['./index.html', './styles.css', './app.js', './data.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
