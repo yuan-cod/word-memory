@@ -2,36 +2,42 @@
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+
 const STORAGE_PREFIX = 'wordMemory_';
+const MASTERED = 3;
+const QUEUE_VERSION = 3; // 3 = 整章纵向单词流（双卡）
 const REVIEW_INTERVALS = [20, 60, 540, 1440, 2880, 8640, 44640].map(n => n * 60 * 1000);
+
 const chapterCache = new Map();
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
 const state = {
-  chapter: 1,
-  words: [],
   meta: [],
-  queue: [],
-  index: 0,
+  chapter: 1,
+  studyChapter: 1,
+  words: [],
+  rows: [],
+  rowIndex: new Map(),
   stats: {},
-  session: { correct: 0, total: 0, reviewCount: 0 },
-  wordbook: [],
-  mistakes: [],
+  current: 0,
+  session: { correct: 0, total: 0 },
+  vocabulary: [],
   schedule: {},
   mode: 'en2zh',
-  filter: 'all',
   sessionType: 'chapter',
-  studyChapter: 1,
-  flipped: false,
-  transitioning: false,
   view: 'study',
-  listType: 'wordbook',
   spelling: { queue: [], index: 0, correct: 0, total: 0, answered: false },
-  shuffle: localStorage.getItem(`${STORAGE_PREFIX}shuffle`) === 'true'
+  shuffle: localStorage.getItem(`${STORAGE_PREFIX}shuffle`) === 'true',
+  busy: false,
+  programmaticUntil: 0
 };
 
-let loadToken = 0;
 let toastTimer;
 let searchTimer;
 let audioTimer;
+let scrollTimer;
+
+/* ---------- 本地存储 ---------- */
 
 function readLocal(key, fallback) {
   try { return JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}${key}`)) ?? fallback; }
@@ -41,32 +47,24 @@ function writeLocal(key, value) {
   try { localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(value)); }
   catch { showToast('浏览器存储空间不足，请先导出备份'); }
 }
-function pythonApi() { return window.pywebview?.api; }
-function parseApiResult(result) { return typeof result === 'string' ? JSON.parse(result) : result; }
 
 const Store = {
-  async loadChapter(chapter) {
-    if (pythonApi()) return pythonApi().get_progress(chapter);
+  loadChapter(chapter) {
     return readLocal(`progress_${chapter}`, {});
   },
-  async saveChapter(chapter, progress) {
-    if (pythonApi()) return pythonApi().save_progress(chapter, JSON.stringify(progress));
+  saveChapter(chapter, progress) {
     writeLocal(`progress_${chapter}`, progress);
   },
-  async loadCollection(type) {
-    if (pythonApi()) return pythonApi()[type === 'wordbook' ? 'get_wordbook' : 'get_mistakes']();
-    return readLocal(type, []);
+  loadVocabulary() {
+    return readLocal('wordbook', []);
   },
-  async saveCollection(type, words) {
-    if (pythonApi()) return pythonApi()[`save_${type}_json`](JSON.stringify(words));
-    writeLocal(type, words);
+  saveVocabulary(words) {
+    writeLocal('wordbook', words);
   },
-  async loadSchedule() {
-    if (pythonApi()) return pythonApi().get_ebbinghaus();
+  loadSchedule() {
     return readLocal('ebbinghaus', {});
   },
-  async updateSchedule(word, correct) {
-    if (pythonApi()) return pythonApi().update_ebbinghaus(word, correct);
+  updateSchedule(word, correct) {
     const now = Date.now();
     const record = state.schedule[word] || { stage: 0, lastReview: now };
     record.stage = correct ? Math.min((record.stage || 0) + 1, REVIEW_INTERVALS.length - 1) : 0;
@@ -75,23 +73,48 @@ const Store = {
     state.schedule[word] = record;
     writeLocal('ebbinghaus', state.schedule);
   },
-  async export() {
-    if (pythonApi()) return pythonApi().export_all_data();
+  export() {
     const progress = {};
     state.meta.forEach(({ ch }) => { progress[ch] = readLocal(`progress_${ch}`, {}); });
-    return { version: '2.0', exportDate: Date.now(), wordbook: state.wordbook, mistakes: state.mistakes, progress, ebbinghaus: state.schedule };
+    return {
+      version: '3.0',
+      exportDate: Date.now(),
+      vocabulary: state.vocabulary,
+      wordbook: state.vocabulary,
+      mistakes: [],
+      progress,
+      ebbinghaus: state.schedule
+    };
   },
-  async import(data) {
-    if (pythonApi()) return parseApiResult(await pythonApi().import_data(JSON.stringify(data)));
+  import(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('备份内容无效');
-    ['wordbook', 'mistakes'].forEach(key => {
-      if (data[key] !== undefined && !Array.isArray(data[key])) throw new Error(`${key} 数据格式无效`);
+    ['vocabulary', 'wordbook', 'mistakes'].forEach(key => {
+      if (data[key] !== undefined && !Array.isArray(data[key])) throw new Error('生词本数据格式无效');
     });
     ['progress', 'ebbinghaus'].forEach(key => {
-      if (data[key] !== undefined && (typeof data[key] !== 'object' || data[key] === null || Array.isArray(data[key]))) throw new Error(`${key} 数据格式无效`);
+      const value = data[key];
+      if (value !== undefined && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new Error(`${key} 数据格式无效`);
     });
-    if (data.wordbook) writeLocal('wordbook', data.wordbook);
-    if (data.mistakes) writeLocal('mistakes', data.mistakes);
+
+    const merged = [];
+    [data.vocabulary, data.wordbook, data.mistakes].forEach(list => (list || []).forEach(item => {
+      if (!item || typeof item.en !== 'string') return;
+      const existing = merged.find(row => row.en === item.en);
+      if (existing) {
+        existing.count = Math.max(existing.count || 0, Number(item.count) || 0);
+        existing.lastWrongAt = Math.max(existing.lastWrongAt || 0, Number(item.lastWrongAt) || 0);
+        existing.zh = existing.zh || item.zh || '';
+      } else {
+        merged.push({
+          en: item.en,
+          zh: item.zh || '',
+          count: Number(item.count) || 0,
+          addedAt: Number(item.addedAt) || Date.now(),
+          lastWrongAt: Number(item.lastWrongAt) || 0
+        });
+      }
+    }));
+    writeLocal('wordbook', merged);
     if (data.ebbinghaus) writeLocal('ebbinghaus', data.ebbinghaus);
     if (data.progress) Object.entries(data.progress).forEach(([chapter, progress]) => writeLocal(`progress_${chapter}`, progress));
     return { success: true };
@@ -104,6 +127,8 @@ function showToast(message) {
   $('#toast').classList.add('show');
   toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 2600);
 }
+
+/* ---------- 词库 ---------- */
 
 function embeddedChapters() {
   return window.WORD_MEMORY_DATA?.chapters || null;
@@ -135,143 +160,254 @@ function shuffled(items) {
   return result;
 }
 
-function makeQueue(words, resumeStats = state.stats, shuffledMode = state.shuffle) {
-  // 每章单词只过一遍：已掌握的词不再出现，其余词各出现一次。
-  const remaining = words
-    .filter(word => (Number(resumeStats[word.en]?.mastery) || 0) < 3)
-    .map(word => ({ ...word, isReview: false }));
-  return shuffledMode ? shuffled(remaining) : remaining;
+function masteryOf(en) {
+  const value = Number(state.stats[en]?.mastery);
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(MASTERED, value));
 }
 
-function pruneQueueByMastery() {
-  const mastered = new Set(state.words.filter(word => masteryOf(word) >= 3).map(word => word.en));
-  state.queue = state.queue.filter(word => !mastered.has(word.en));
-  if (state.index > state.queue.length) state.index = state.queue.length;
+/* ---------- 行数据 ---------- */
+
+function buildRows(words, saved = null) {
+  const byEn = new Map(words.map(word => [word.en, word]));
+  const activeEns = [];
+
+  if (saved) {
+    saved.order.forEach(en => { if (byEn.has(en)) activeEns.push(en); });
+  } else {
+    const pending = words.filter(word => masteryOf(word.en) < MASTERED).map(word => word.en);
+    activeEns.push(...(state.shuffle ? shuffled(pending) : pending));
+  }
+
+  const rows = activeEns.map(en => {
+    const word = byEn.get(en);
+    const answered = saved?.answered?.[en] || null;
+    return { en, zh: word.zh, answered, revealed: Boolean(answered), locked: false };
+  });
+
+  // 已经掌握的词也列出来，灰化排在整章末尾
+  words.forEach(word => {
+    if (masteryOf(word.en) >= MASTERED && !activeEns.includes(word.en)) {
+      rows.push({ en: word.en, zh: word.zh, answered: null, revealed: true, locked: true });
+    }
+  });
+  return rows;
 }
 
-const QUEUE_VERSION = 2; // 2 = 每章每词只过一遍
+function buildCustomRows(words) {
+  return words.map(word => ({ en: word.en, zh: word.zh, answered: null, revealed: false, locked: false }));
+}
 
-function validProgress(saved) {
+function validProgress(saved, words) {
   if (!saved || saved.queueVersion !== QUEUE_VERSION) return false;
-  if (!Array.isArray(saved.queue) || !saved.queue.length) return false;
-  const knownWords = new Set(state.words.map(word => word.en));
-  return saved.queue.every(item => item && knownWords.has(item.en)) && Number.isInteger(saved.index) && saved.index >= 0 && saved.index <= saved.queue.length;
+  if (!Array.isArray(saved.order) || !saved.order.length) return false;
+  if (!saved.answered || typeof saved.answered !== 'object' || Array.isArray(saved.answered)) return false;
+  if (!Number.isInteger(saved.current)) return false;
+  const known = new Set(words.map(word => word.en));
+  return saved.order.every(en => known.has(en));
 }
 
-async function saveProgress() {
+function saveProgress() {
   if (state.sessionType !== 'chapter') return;
-  const progress = { queueVersion: QUEUE_VERSION, queue: state.queue, index: state.index, wordStats: state.stats, sessionStats: state.session, filter: state.filter, sessionType: state.sessionType };
-  try { await Store.saveChapter(state.chapter, progress); }
-  catch (error) { console.warn('进度保存失败', error); }
+  const active = state.rows.filter(row => !row.locked);
+  const answered = active.reduce((acc, row) => { if (row.answered) acc[row.en] = row.answered; return acc; }, {});
+  const progress = {
+    queueVersion: QUEUE_VERSION,
+    order: active.map(row => row.en),
+    answered,
+    current: state.current,
+    wordStats: state.stats,
+    sessionStats: state.session,
+    sessionType: state.sessionType
+  };
+  Store.saveChapter(state.chapter, progress);
 }
 
-async function loadStudy(chapter = state.chapter, { fresh = false, customWords = null, type = 'chapter' } = {}) {
-  const token = ++loadToken;
+/* ---------- 加载 ---------- */
+
+function clampIndex(index) {
+  if (!state.rows.length) return 0;
+  return Math.max(0, Math.min(state.rows.length - 1, index));
+}
+
+function firstUnansweredIndex() {
+  const index = state.rows.findIndex(row => !row.locked && !row.answered);
+  return index === -1 ? 0 : index;
+}
+
+async function loadStudy(chapter = state.chapter, { fresh = false, customWords = null, type = 'chapter', focusWord = null } = {}) {
   state.chapter = chapter;
-  state.transitioning = false;
-  setFlipped(false, true);
-  $('#flashcardScene').hidden = false;
-  $('#recallActions').hidden = false;
-  $('.keyboard-hint').hidden = false;
-  $('#finishedCard').hidden = true;
+  state.busy = false;
   try {
-    const [words, saved] = await Promise.all([getChapter(chapter), Store.loadChapter(chapter)]);
-    if (token !== loadToken) return;
+    const words = await getChapter(chapter);
     state.sessionType = type;
     state.studyChapter = chapter;
     state.words = customWords || words;
+
     if (type === 'chapter') {
-      state.stats = saved?.wordStats || {};
+      const saved = Store.loadChapter(chapter);
+      state.stats = saved?.wordStats && typeof saved.wordStats === 'object' && !Array.isArray(saved.wordStats) ? saved.wordStats : {};
       state.words.forEach(word => { state.stats[word.en] ||= { mastery: 0, correctCount: 0, wrongCount: 0 }; });
-    }
-    if (!fresh && !customWords && validProgress(saved)) {
-      state.queue = saved.queue;
-      state.index = saved.index;
-      state.session = { correct: 0, total: 0, reviewCount: 0, ...saved.sessionStats };
-      state.filter = saved.filter || 'all';
-      state.sessionType = 'chapter';
+      const resumable = !fresh && validProgress(saved, state.words);
+      state.rows = buildRows(state.words, resumable ? saved : null);
+      if (resumable) {
+        const sessionStats = saved.sessionStats || {};
+        state.session = { correct: Number(sessionStats.correct) || 0, total: Number(sessionStats.total) || 0 };
+        state.current = clampIndex(saved.current);
+        if (state.rows[state.current]?.answered) state.current = firstUnansweredIndex();
+      } else {
+        state.session = { correct: 0, total: 0 };
+        state.current = firstUnansweredIndex();
+      }
+      chapterCache.set(`stats_${chapter}`, state.stats);
     } else {
-      state.stats = type === 'chapter' ? state.stats : {};
-      state.queue = makeQueue(state.words);
-      state.index = 0;
-      state.session = { correct: 0, total: 0, reviewCount: 0 };
-      state.filter = 'all';
+      state.stats = {};
+      state.rows = buildCustomRows(state.words);
+      state.session = { correct: 0, total: 0 };
+      state.current = 0;
     }
+
+    renderStack();
     renderChapterList();
-    renderStudy();
-    if (type === 'chapter') chapterCache.set(`stats_${chapter}`, state.stats);
-    await saveProgress();
+    renderProgress();
+    if (type === 'chapter') saveProgress();
+    if (focusWord) focusOn(focusWord);
+    else scrollToRow(state.current, false);
   } catch (error) {
     console.error(error);
-    showToast(error.message || '词库加载失败，请通过本地服务器打开');
+    showToast(error.message || '词库加载失败，请确认 data.js 与 index.html 在同一目录');
   }
 }
 
-function currentWord() { return state.queue[state.index]; }
-function masteryOf(word) { return Math.max(0, Math.min(3, Number(state.stats[word.en]?.mastery) || 0)); }
+/* ---------- 渲染 ---------- */
 
-function setFlipped(value, instant = false) {
-  state.flipped = value;
-  const card = $('#flashcard');
-  if (instant) card.style.transition = 'none';
-  card.classList.toggle('flipped', value);
-  card.setAttribute('aria-label', value ? '单词释义，点击或按空格返回' : '单词卡片，点击或按空格查看释义');
-  if (instant) requestAnimationFrame(() => { card.style.transition = ''; });
+function statusTextFor(row) {
+  if (row.locked) return '已掌握';
+  if (row.answered === 'known') return '已记住';
+  if (row.answered === 'unknown') return '标记不熟';
+  return masteryOf(row.en) > 0 ? '继续熟悉' : '新单词';
 }
 
-function flipCard() {
-  if (state.view !== 'study' || state.transitioning || !currentWord()) return;
-  setFlipped(!state.flipped);
+function createRow(row, index) {
+  const article = document.createElement('article');
+  article.className = 'word-pair';
+  article.dataset.index = String(index);
+  article.innerHTML = `
+    <div class="pair-head">
+      <span class="pair-index">${String(index + 1).padStart(2, '0')}</span>
+      <span class="pair-status"></span>
+      <span class="pair-badge" hidden></span>
+      <button class="card-icon pair-bookmark" type="button" aria-label="收藏到生词本" title="收藏到生词本"><svg><use href="#i-bookmark"/></svg></button>
+    </div>
+    <div class="pair-body">
+      <div class="card word-card">
+        <span class="card-kicker"></span>
+        <h2 class="word-text"></h2>
+        <button class="pronunciation" type="button"><svg><use href="#i-volume"/></svg><span>点击发音</span></button>
+        <span class="mastery-dots" aria-label="熟练度"><i></i><i></i><i></i></span>
+      </div>
+      <div class="card meaning-card">
+        <span class="meaning-label">WORD MEANING</span>
+        <p class="meaning-text"></p>
+        <span class="unblur-hint"><kbd>↓</kbd><span>显示释义</span></span>
+      </div>
+    </div>`;
+  updateRowEl(article, row);
+  return article;
 }
 
-function renderStudy() {
-  $('#chapterTag').textContent = `CHAPTER ${String(state.studyChapter).padStart(2, '0')}`;
-  $('#spellingSubtitle').textContent = `Chapter ${String(state.studyChapter).padStart(2, '0')} · 根据中文释义拼写英文单词`;
-  $('#chapterTotal').textContent = state.words.length;
-  $('#breadcrumbCurrent').textContent = '词汇记忆';
-  renderCard();
-  renderProgress();
-}
-
-function renderCard() {
-  const word = currentWord();
-  if (!word) {
-    $('#flashcardScene').hidden = true;
-    $('#recallActions').hidden = true;
-    $('.keyboard-hint').hidden = true;
-    $('#finishedCard').hidden = false;
-    const accuracy = state.session.total ? Math.round(state.session.correct / state.session.total * 100) : 0;
-    $('#finishedSummary').textContent = `完成 ${state.session.total} 次回忆，认识率 ${accuracy}%。不熟的词，下一轮再见。`;
-    $('#sessionCount').textContent = `${state.index} / ${state.queue.length}`;
-    $('#sessionProgress').style.width = '100%';
-    return;
-  }
+function updateRowEl(el, row) {
+  if (!el) return;
   const englishFirst = state.mode === 'en2zh';
-  $('#promptText').textContent = englishFirst ? word.en : word.zh;
-  $('#promptText').classList.toggle('chinese', !englishFirst);
-  $('#answerText').textContent = englishFirst ? word.zh : word.en;
-  $('#answerText').classList.toggle('english', !englishFirst);
-  $('#answerWord').textContent = englishFirst ? word.en : word.zh;
-  $('#answerPrompt').textContent = englishFirst ? word.en : word.zh;
-  $('#cardKicker').textContent = englishFirst ? 'DO YOU KNOW THIS WORD?' : 'WHICH WORD DOES IT MEAN?';
-  $('#speakBtn').hidden = !englishFirst;
-  const mastery = masteryOf(word);
-  $('#wordStatus').textContent = word.isReview ? '再次见面' : mastery ? '继续熟悉' : '新单词';
-  $$('.mastery-dots').forEach(container => [...container.children].forEach((dot, i) => dot.classList.toggle('filled', i < mastery)));
-  $('#bookmarkBtn').classList.toggle('active', state.wordbook.some(item => item.en === word.en));
-  $('#bookmarkBtn').setAttribute('aria-label', state.wordbook.some(item => item.en === word.en) ? '从生词本移除' : '收藏到生词本');
-  $('#sessionCount').textContent = `${state.index + 1} / ${state.queue.length}`;
-  $('#sessionProgress').style.width = `${state.index / state.queue.length * 100}%`;
-  $('#sessionKind').textContent = state.sessionType === 'wordbook' ? '生词复习' : state.filter === 'mistakes' ? '易错词复习' : state.filter === 'learning' ? '薄弱词复习' : state.shuffle ? '随机学习' : '顺序学习';
-  setFlipped(false, true);
+  const isCurrent = state.rows[state.current] === row;
+  el.className = [
+    'word-pair',
+    row.locked ? 'locked' : '',
+    row.answered ? `answered-${row.answered}` : '',
+    row.revealed ? 'revealed' : '',
+    isCurrent ? 'current' : ''
+  ].filter(Boolean).join(' ');
+
+  const wordText = el.querySelector('.word-text');
+  wordText.textContent = englishFirst ? row.en : row.zh;
+  wordText.classList.toggle('chinese', !englishFirst);
+
+  const meaningText = el.querySelector('.meaning-text');
+  meaningText.textContent = englishFirst ? row.zh : row.en;
+  meaningText.classList.toggle('english', !englishFirst);
+
+  el.querySelector('.card-kicker').textContent = englishFirst ? 'DO YOU KNOW THIS WORD?' : 'WHICH WORD DOES IT MEAN?';
+  el.querySelector('.meaning-label').textContent = englishFirst ? 'WORD MEANING' : 'ENGLISH WORD';
+  el.querySelector('.pair-status').textContent = statusTextFor(row);
+
+  const badge = el.querySelector('.pair-badge');
+  const answered = row.answered && !row.locked ? row.answered : null;
+  badge.hidden = !answered;
+  badge.className = `pair-badge${answered ? ` ${answered}` : ''}`;
+  badge.textContent = answered === 'known' ? '记住' : answered === 'unknown' ? '不熟' : '';
+
+  const bookmark = el.querySelector('.pair-bookmark');
+  bookmark.classList.toggle('active', vocabularyHas(row.en));
+
+  el.querySelector('.pronunciation').hidden = !englishFirst;
+
+  [...el.querySelectorAll('.mastery-dots i')].forEach((dot, i) => dot.classList.toggle('filled', i < masteryOf(row.en)));
+
+  const meaningCard = el.querySelector('.meaning-card');
+  meaningCard.classList.toggle('blurred', !row.revealed && !row.locked);
+}
+
+function renderStack() {
+  const inner = $('#wordStackInner');
+  const fragment = document.createDocumentFragment();
+  state.rows.forEach((row, index) => fragment.appendChild(createRow(row, index)));
+  inner.replaceChildren(fragment);
+
+  state.rowIndex.clear();
+  state.rows.forEach((row, index) => state.rowIndex.set(row.en, index));
+
+  $('#chapterTag').textContent = `CHAPTER ${String(state.studyChapter).padStart(2, '0')}`;
+  $('#spellingSubtitle').textContent = state.sessionType === 'wordbook'
+    ? '生词本 · 根据释义拼写英文单词'
+    : `Chapter ${String(state.studyChapter).padStart(2, '0')} · 根据中文释义拼写英文单词`;
+  $('#chapterTotal').textContent = state.words.length;
+  $('#sessionKind').textContent = state.sessionType === 'wordbook' ? '生词复习' : state.shuffle ? '随机学习' : '顺序学习';
+  $('#breadcrumbCurrent').textContent = '词汇记忆';
+
+  renderFinished();
+  updateSessionUi();
+  syncPairHeight();
+}
+
+function updateSessionUi() {
+  const active = state.rows.filter(row => !row.locked);
+  const answered = active.filter(row => row.answered).length;
+  $('#sessionCount').textContent = `${answered} / ${active.length}`;
+  $('#sessionProgress').style.width = `${active.length ? answered / active.length * 100 : 0}%`;
+}
+
+function renderFinished() {
+  const remaining = state.rows.filter(row => !row.locked && !row.answered).length;
+  const finished = $('#finishedCard');
+  const done = remaining === 0;
+  finished.hidden = !done;
+  $('#recallActions').hidden = done;
+  $('.keyboard-hint').hidden = done;
+  if (done) {
+    const accuracy = state.session.total ? Math.round(state.session.correct / state.session.total * 100) : 0;
+    $('#finishedSummary').textContent = state.session.total
+      ? `完成 ${state.session.total} 次回忆，认识率 ${accuracy}%。不熟的词，下一轮再见。`
+      : '这一章已经全部掌握，可以直接进入下一章。';
+  }
 }
 
 function renderProgress() {
-  const mastered = state.words.filter(word => masteryOf(word) >= 3).length;
-  const learning = state.words.filter(word => { const level = masteryOf(word); return level > 0 && level < 3; }).length;
+  const mastered = state.words.filter(word => masteryOf(word.en) >= MASTERED).length;
+  const learning = state.words.filter(word => { const level = masteryOf(word.en); return level > 0 && level < MASTERED; }).length;
   const fresh = state.words.length - mastered - learning;
   const percentage = state.words.length ? Math.round(mastered / state.words.length * 100) : 0;
   const accuracy = state.session.total ? Math.round(state.session.correct / state.session.total * 100) : null;
+
   $('#masteredNumber').textContent = mastered;
   $('#learningNumber').textContent = learning;
   $('#freshNumber').textContent = fresh;
@@ -289,125 +425,204 @@ function renderChapterList() {
     button.className = `chapter-item${ch === state.studyChapter ? ' active' : ''}${Object.keys(saved).length ? ' started' : ''}`;
     button.dataset.chapter = ch;
     button.innerHTML = `<span class="chapter-number">${String(ch).padStart(2, '0')}</span><span>Chapter ${String(ch).padStart(2, '0')}</span><i class="chapter-mini-progress"></i>`;
-    button.setAttribute('aria-label', `第 ${ch} 章${ch === state.chapter ? '，当前章节' : ''}`);
+    button.setAttribute('aria-label', `第 ${ch} 章${ch === state.studyChapter ? '，当前章节' : ''}`);
     fragment.appendChild(button);
   });
   $('#chapterList').replaceChildren(fragment);
 }
 
-async function selectChapter(chapter) {
-  closeSidebar();
-  switchView('study');
-  await loadStudy(chapter);
+/* ---------- 滚动与当前卡片 ---------- */
+
+function rowElAt(index) {
+  return $('#wordStackInner')?.children[index] || null;
 }
 
-async function rateWord(correct) {
-  const word = currentWord();
-  if (!word || state.transitioning) return;
-  state.transitioning = true;
-  $('#knownBtn').disabled = true;
-  $('#unknownBtn').disabled = true;
-  const stats = state.stats[word.en] ||= { mastery: 0, correctCount: 0, wrongCount: 0 };
-  stats.mastery = correct ? Math.min(3, masteryOf(word) + 1) : Math.max(0, masteryOf(word) - 1);
-  stats[correct ? 'correctCount' : 'wrongCount'] = (stats[correct ? 'correctCount' : 'wrongCount'] || 0) + 1;
-  state.session.total++;
-  if (correct) state.session.correct++;
-  if (word.isReview) state.session.reviewCount++;
-  if (!correct) {
-    await addMistake(word, false);
-  }
-  state.index++;
-  await Store.updateSchedule(word.en, correct);
-  const scene = $('#flashcardScene');
-  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!reduceMotion) {
-    scene.classList.add(correct ? 'exit-known' : 'exit-unknown');
-    await new Promise(resolve => setTimeout(resolve, 90));
-  }
-  renderCard();
-  renderProgress();
-  scene.classList.remove('exit-known', 'exit-unknown');
-  if (!reduceMotion) {
-    scene.classList.add('enter-card');
-    setTimeout(() => scene.classList.remove('enter-card'), 170);
-  }
-  state.transitioning = false;
-  $('#knownBtn').disabled = false;
-  $('#unknownBtn').disabled = false;
-  saveProgress();
+function syncPairHeight() {
+  const stack = $('#wordStack');
+  if (!stack) return;
+  // 留一点下一张的边，滑动时能看出这是一叠卡片
+  stack.style.setProperty('--pair-height', `${Math.max(220, stack.clientHeight - 40)}px`);
 }
 
-async function addMistake(word, notify = true) {
-  const existing = state.mistakes.find(item => item.en === word.en);
-  if (existing) {
-    existing.count = (existing.count || 1) + 1;
-    existing.lastWrongAt = Date.now();
-  } else state.mistakes.push({ en: word.en, zh: word.zh, count: 1, lastWrongAt: Date.now() });
-  await Store.saveCollection('mistakes', state.mistakes);
-  renderCollectionCounts();
-  if (notify) showToast('已加入易错词');
+function scrollToRow(index, smooth = true) {
+  const stack = $('#wordStack');
+  const el = rowElAt(index);
+  if (!stack || !el) return;
+  const target = el.offsetTop - Math.max(0, (stack.clientHeight - el.offsetHeight) / 2);
+  state.programmaticUntil = Date.now() + (smooth ? 420 : 60);
+  stack.scrollTo({ top: Math.max(0, target), behavior: smooth && !reduceMotion.matches ? 'smooth' : 'auto' });
 }
 
-async function toggleBookmark() {
-  const word = currentWord();
-  if (!word) return;
-  const saved = state.wordbook.some(item => item.en === word.en);
-  state.wordbook = saved ? state.wordbook.filter(item => item.en !== word.en) : [...state.wordbook, { en: word.en, zh: word.zh, addedAt: Date.now() }];
-  $('#bookmarkBtn').classList.toggle('active', !saved);
-  renderCollectionCounts();
-  await Store.saveCollection('wordbook', state.wordbook);
-  showToast(saved ? '已从生词本移除' : '已收藏到生词本');
+function setCurrent(index, { scroll = false } = {}) {
+  if (!state.rows.length) return;
+  const next = clampIndex(index);
+  const prevEl = rowElAt(state.current);
+  state.current = next;
+  prevEl?.classList.remove('current');
+  rowElAt(next)?.classList.add('current');
+  updateSessionUi();
+  if (scroll) scrollToRow(next, true);
 }
 
-function speak(text) {
-  if (!('speechSynthesis' in window)) { showToast('当前环境不支持语音朗读'); return; }
-  speechSynthesis.cancel();
-  clearTimeout(audioTimer);
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US';
-  utterance.rate = .9;
-  $('#speakBtn').classList.add('speaking');
-  const stop = () => $('#speakBtn').classList.remove('speaking');
-  utterance.onend = stop;
-  utterance.onerror = stop;
-  speechSynthesis.speak(utterance);
-  audioTimer = setTimeout(stop, 4000);
-}
-
-function switchView(view) {
-  state.view = view;
-  $$('.view').forEach(element => element.classList.toggle('active', element.id === `${view}View`));
-  $$('.nav-item').forEach(button => {
-    const active = button.dataset.view === view;
-    button.classList.toggle('active', active);
-    if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+function syncCurrentFromScroll() {
+  if (state.view !== 'study' || !state.rows.length) return;
+  const stack = $('#wordStack');
+  if (!stack) return;
+  const center = stack.scrollTop + stack.clientHeight / 2;
+  let best = state.current;
+  let bestDistance = Infinity;
+  [...$('#wordStackInner').children].forEach((el, index) => {
+    const middle = el.offsetTop + el.offsetHeight / 2;
+    const distance = Math.abs(middle - center);
+    if (distance < bestDistance) { bestDistance = distance; best = index; }
   });
-  $('#breadcrumbCurrent').textContent = { study: '词汇记忆', wordbook: '单词收藏', spelling: '拼写练习' }[view];
-  closeSidebar();
-  if (view === 'wordbook') renderWordList();
-  if (view === 'spelling') startSpelling();
+  if (best !== state.current) setCurrent(best);
+}
+
+function focusOn(en) {
+  const index = state.rowIndex.get(en);
+  if (index === undefined) { scrollToRow(state.current, false); return; }
+  setCurrent(index);
+  scrollToRow(index, false);
+}
+
+/* ---------- 答题 ---------- */
+
+function revealCurrent() {
+  const row = state.rows[state.current];
+  if (!row || row.locked || row.revealed) return;
+  row.revealed = true;
+  const el = rowElAt(state.current);
+  if (!el) return;
+  el.classList.add('revealed');
+  el.querySelector('.meaning-card')?.classList.remove('blurred');
+}
+
+function nextUnanswered(from) {
+  for (let i = from + 1; i < state.rows.length; i++) {
+    const row = state.rows[i];
+    if (!row.locked && !row.answered) return i;
+  }
+  for (let i = 0; i < state.rows.length; i++) {
+    const row = state.rows[i];
+    if (!row.locked && !row.answered) return i;
+  }
+  return -1;
+}
+
+function advanceToNext() {
+  const next = nextUnanswered(state.current);
+  if (next >= 0) {
+    setCurrent(next, { scroll: true });
+    return;
+  }
+  renderFinished();
+  const finished = $('#finishedCard');
+  if (!finished.hidden) {
+    const stack = $('#wordStack');
+    state.programmaticUntil = Date.now() + 420;
+    stack.scrollTo({ top: finished.offsetTop - 12, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  }
+}
+
+function markCurrent(correct) {
+  const row = state.rows[state.current];
+  if (!row || row.locked || state.busy) return;
+  if (row.answered) {
+    showToast('这个词已经标记过了');
+    advanceToNext();
+    return;
+  }
+  state.busy = true;
+
+  const before = masteryOf(row.en);
+  const stats = state.stats[row.en] ||= { mastery: 0, correctCount: 0, wrongCount: 0 };
+  stats.mastery = correct ? Math.min(MASTERED, before + 1) : Math.max(0, before - 1);
+  const countKey = correct ? 'correctCount' : 'wrongCount';
+  stats[countKey] = (stats[countKey] || 0) + 1;
+
+  row.answered = correct ? 'known' : 'unknown';
+  row.revealed = true; // 标记后答案常显，回看时不用再按一次
+  state.session.total += 1;
+  if (correct) state.session.correct += 1;
+  if (!correct) addToVocabulary(row);
+  Store.updateSchedule(row.en, correct);
+
+  updateRowEl(rowElAt(state.current), row);
+  renderProgress();
+  updateSessionUi();
+  saveProgress();
+
+  state.busy = false;
+  advanceToNext();
+}
+
+/* ---------- 生词本（收藏 + 不熟 合并） ---------- */
+
+function vocabularyHas(en) {
+  return state.vocabulary.some(item => item.en === en);
+}
+
+function refreshBookmark(en) {
+  const index = state.rowIndex.get(en);
+  if (index === undefined) return;
+  rowElAt(index)?.querySelector('.pair-bookmark')?.classList.toggle('active', vocabularyHas(en));
+}
+
+function addToVocabulary(word) {
+  const existing = state.vocabulary.find(item => item.en === word.en);
+  if (existing) {
+    existing.count = (existing.count || 0) + 1;
+    existing.lastWrongAt = Date.now();
+    existing.zh = word.zh || existing.zh;
+  } else {
+    state.vocabulary.push({ en: word.en, zh: word.zh, count: 1, addedAt: Date.now(), lastWrongAt: Date.now() });
+  }
+  Store.saveVocabulary(state.vocabulary);
+  renderCollectionCounts();
+  refreshBookmark(word.en);
+}
+
+function toggleBookmark(index) {
+  const row = state.rows[index];
+  if (!row) return;
+  if (vocabularyHas(row.en)) {
+    state.vocabulary = state.vocabulary.filter(item => item.en !== row.en);
+    Store.saveVocabulary(state.vocabulary);
+    renderCollectionCounts();
+    refreshBookmark(row.en);
+    showToast('已从生词本移除');
+    return;
+  }
+  state.vocabulary.push({ en: row.en, zh: row.zh, count: 0, addedAt: Date.now() });
+  Store.saveVocabulary(state.vocabulary);
+  renderCollectionCounts();
+  refreshBookmark(row.en);
+  showToast('已收藏到生词本');
 }
 
 function renderCollectionCounts() {
-  $('#wordbookCount').textContent = state.wordbook.length;
-  $('#listSavedCount').textContent = state.wordbook.length;
-  $('#listMistakeCount').textContent = state.mistakes.length;
+  $('#wordbookCount').textContent = state.vocabulary.length;
+  $('#listTotalCount').textContent = state.vocabulary.length;
 }
 
 function renderWordList() {
   renderCollectionCounts();
-  const source = state.listType === 'wordbook' ? state.wordbook : state.mistakes;
   const query = $('#listSearchInput').value.trim().toLowerCase();
-  const words = source.filter(word => word.en.toLowerCase().includes(query) || word.zh.toLowerCase().includes(query));
-  $$('.list-tabs button').forEach(button => button.classList.toggle('active', button.dataset.list === state.listType));
-  $('#wordbookSubtitle').textContent = state.listType === 'wordbook' ? `共收藏 ${state.wordbook.length} 个词，给它们多一点时间。` : `共 ${state.mistakes.length} 个易错词，拼写错误与“不认识”会出现在这里。`;
-  $('#studyWordbookBtn').innerHTML = `${state.listType === 'wordbook' ? '练习生词' : '复习易错词'}<svg><use href="#i-arrow"/></svg>`;
+  const source = state.vocabulary;
+  const words = source.filter(word => word.en.toLowerCase().includes(query) || (word.zh || '').toLowerCase().includes(query));
+
+  $('#wordbookSubtitle').textContent = source.length
+    ? `共 ${source.length} 个词，收藏和标记不熟的都留在这份名单里。`
+    : '收藏和标记不熟的词，都会自动留在这里。';
   $('#studyWordbookBtn').disabled = source.length === 0;
+
   if (!words.length) {
-    $('#wordList').innerHTML = `<div class="empty-state"><svg><use href="#i-bookmark"/></svg><h3>${query ? '没有找到匹配的单词' : state.listType === 'wordbook' ? '生词本还是空的' : '暂时没有易错词'}</h3><p>${query ? '换一个关键词试试。' : state.listType === 'wordbook' ? '背词时点击卡片右上角的书签，把单词留在这里。' : '标记“不认识”或拼写错误后，单词会自动记录在这里。'}</p>${query ? '' : '<button class="secondary-btn" id="emptyStudyBtn">去背一组单词<svg><use href="#i-arrow"/></svg></button>'}</div>`;
+    $('#wordList').innerHTML = `<div class="empty-state"><svg><use href="#i-bookmark"/></svg><h3>${query ? '没有找到匹配的单词' : '生词本还是空的'}</h3><p>${query ? '换一个关键词试试。' : '背词时点右上角的书签收藏，或者标记“还不认识”，词就会自动进来。'}</p>${query ? '' : '<button class="secondary-btn" id="emptyStudyBtn">去背一组单词<svg><use href="#i-arrow"/></svg></button>'}</div>`;
     $('#emptyStudyBtn')?.addEventListener('click', () => switchView('study'));
     return;
   }
+
   const fragment = document.createDocumentFragment();
   words.forEach((word, index) => {
     const row = document.createElement('article');
@@ -420,38 +635,40 @@ function renderWordList() {
     const zh = document.createElement('p');
     zh.textContent = word.zh;
     main.append(en, zh);
+
     const meta = document.createElement('span');
     meta.className = 'word-row-meta';
-    meta.textContent = state.listType === 'mistakes' ? `错 ${word.count || 1} 次` : '已收藏';
+    meta.textContent = (word.count || 0) > 1 ? `×${word.count}` : '';
+
     const actions = document.createElement('div');
     actions.className = 'word-row-actions';
     actions.innerHTML = `<button class="icon-btn speak-row" aria-label="朗读 ${word.en}" title="朗读"><svg><use href="#i-volume"/></svg></button><button class="icon-btn remove-row" aria-label="移除 ${word.en}" title="移除"><svg><use href="#i-close"/></svg></button>`;
-    actions.querySelector('.speak-row').addEventListener('click', () => speak(word.en));
-    actions.querySelector('.remove-row').addEventListener('click', async () => {
-      if (state.listType === 'wordbook') state.wordbook = state.wordbook.filter(item => item.en !== word.en);
-      else state.mistakes = state.mistakes.filter(item => item.en !== word.en);
-      await Store.saveCollection(state.listType, state[state.listType]);
+    actions.querySelector('.speak-row').addEventListener('click', () => speak(word.en, actions.querySelector('.speak-row')));
+    actions.querySelector('.remove-row').addEventListener('click', () => {
+      state.vocabulary = state.vocabulary.filter(item => item.en !== word.en);
+      Store.saveVocabulary(state.vocabulary);
       renderWordList();
-      if (currentWord()?.en === word.en) $('#bookmarkBtn').classList.toggle('active', state.wordbook.some(item => item.en === word.en));
+      refreshBookmark(word.en);
       showToast('已移除');
     });
+
     row.append(main, meta, actions);
     fragment.appendChild(row);
   });
   $('#wordList').replaceChildren(fragment);
 }
 
-async function studyCollection() {
-  const type = state.listType;
-  const words = state[type];
-  if (!words.length) return;
+function studyCollection() {
+  if (!state.vocabulary.length) return;
   switchView('study');
-  await loadStudy(state.chapter, { fresh: true, customWords: [...words], type });
-  showToast(type === 'wordbook' ? `开始复习 ${words.length} 个生词` : `开始复习 ${words.length} 个易错词`);
+  loadStudy(state.chapter, { fresh: true, customWords: [...state.vocabulary], type: 'wordbook' });
+  showToast(`开始复习 ${state.vocabulary.length} 个生词`);
 }
 
+/* ---------- 拼写 ---------- */
+
 function startSpelling() {
-  if (!state.words.length || state.sessionType !== 'chapter' || state.studyChapter !== state.chapter) return;
+  if (!state.words.length) { showToast('这一章还没有可练习的词'); return; }
   state.spelling = { queue: state.shuffle ? shuffled(state.words) : [...state.words], index: 0, correct: 0, total: 0, answered: false };
   renderSpelling();
 }
@@ -493,9 +710,11 @@ function revealSpelling(skipped = false) {
   const value = $('#spellingInput').value.trim().toLowerCase();
   if (!value && !skipped) { showToast('先写出你记得的拼写'); $('#spellingInput').focus(); return; }
   const correct = !skipped && value === word.en.toLowerCase();
+
   spelling.answered = true;
   spelling.total++;
   if (correct) spelling.correct++;
+
   $('#spellingInput').classList.add(correct ? 'correct' : 'wrong');
   $('#spellingFeedback').className = `spelling-feedback ${correct ? 'good' : 'bad'}`;
   $('#spellingFeedback').innerHTML = correct ? '拼写正确，这个词是你的了。' : `${skipped ? '正确答案' : '再记一次'}：<strong></strong>`;
@@ -503,15 +722,23 @@ function revealSpelling(skipped = false) {
   $('#spellingScore').textContent = `${spelling.correct} 个正确`;
   $('#spellingAccuracy').textContent = `${Math.round(spelling.correct / spelling.total * 100)}%`;
   $('#spellingSubmit').innerHTML = '下一个<svg><use href="#i-arrow"/></svg>';
+
   const stats = state.stats[word.en] ||= { mastery: 0, correctCount: 0, wrongCount: 0 };
-  stats.mastery = correct ? Math.min(3, masteryOf(word) + 1) : Math.max(0, masteryOf(word) - 1);
-  stats[correct ? 'correctCount' : 'wrongCount'] = (stats[correct ? 'correctCount' : 'wrongCount'] || 0) + 1;
-  if (!correct) addMistake(word, false);
+  const before = masteryOf(word.en);
+  stats.mastery = correct ? Math.min(MASTERED, before + 1) : Math.max(0, before - 1);
+  const countKey = correct ? 'correctCount' : 'wrongCount';
+  stats[countKey] = (stats[countKey] || 0) + 1;
+
+  if (!correct) addToVocabulary(word);
   Store.updateSchedule(word.en, correct);
-  pruneQueueByMastery();
+  const index = state.rowIndex.get(word.en);
+  if (index !== undefined) updateRowEl(rowElAt(index), state.rows[index]);
   renderProgress();
+  updateSessionUi();
   saveProgress();
 }
+
+/* ---------- 搜索 ---------- */
 
 function openSearch(query = '') {
   if (!$('#searchDialog').open) $('#searchDialog').showModal();
@@ -551,7 +778,7 @@ async function runSearch(query) {
       button.addEventListener('click', () => {
         $('#searchDialog').close();
         switchView('study');
-        loadStudy(word.chapter, { fresh: true, customWords: [word], type: 'search' });
+        loadStudy(word.chapter, { focusWord: word.en });
       });
       fragment.appendChild(button);
     });
@@ -559,10 +786,11 @@ async function runSearch(query) {
   }, 100);
 }
 
-async function exportData() {
+/* ---------- 备份 ---------- */
+
+function exportData() {
   try {
-    const raw = await Store.export();
-    const data = typeof raw === 'string' ? raw : JSON.stringify(raw, null, 2);
+    const data = JSON.stringify(Store.export(), null, 2);
     const blob = new Blob([data], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -580,15 +808,49 @@ async function importData(file) {
   try {
     let data = JSON.parse(await file.text());
     if (typeof data === 'string') data = JSON.parse(data);
-    const result = await Store.import(data);
+    const result = Store.import(data);
     if (!result.success) throw new Error(result.message || '备份内容无效');
-    [state.wordbook, state.mistakes, state.schedule] = await Promise.all([Store.loadCollection('wordbook'), Store.loadCollection('mistakes'), Store.loadSchedule()]);
+    const stored = Store.loadVocabulary();
+    state.vocabulary = Array.isArray(stored) ? stored : [];
+    const schedule = Store.loadSchedule();
+    state.schedule = schedule && typeof schedule === 'object' ? schedule : {};
     renderCollectionCounts();
     await loadStudy(state.chapter, { fresh: false });
     $('#settingsDialog').close();
     showToast('学习备份已恢复');
   } catch (error) { console.error(error); showToast(`导入失败：${error.message || '文件格式不正确'}`); }
   $('#importFile').value = '';
+}
+
+/* ---------- 杂项 ---------- */
+
+function speak(text, button = null) {
+  if (!('speechSynthesis' in window)) { showToast('当前环境不支持语音朗读'); return; }
+  speechSynthesis.cancel();
+  clearTimeout(audioTimer);
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  utterance.rate = .9;
+  button?.classList.add('speaking');
+  const stop = () => button?.classList.remove('speaking');
+  utterance.onend = stop;
+  utterance.onerror = stop;
+  speechSynthesis.speak(utterance);
+  audioTimer = setTimeout(stop, 4000);
+}
+
+function switchView(view) {
+  state.view = view;
+  $$('.view').forEach(element => element.classList.toggle('active', element.id === `${view}View`));
+  $$('.nav-item').forEach(button => {
+    const active = button.dataset.view === view;
+    button.classList.toggle('active', active);
+    if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+  });
+  $('#breadcrumbCurrent').textContent = { study: '词汇记忆', wordbook: '单词收藏', spelling: '拼写练习' }[view];
+  closeSidebar();
+  if (view === 'wordbook') renderWordList();
+  if (view === 'spelling') startSpelling();
 }
 
 function applyTheme(theme) {
@@ -609,31 +871,90 @@ function setSidebarCollapsed(collapsed) {
   localStorage.setItem(`${STORAGE_PREFIX}sidebarCollapsed`, String(collapsed));
 }
 
+/* ---------- 旧数据迁移 ---------- */
+
+function migrateVocabulary() {
+  const legacy = readLocal('mistakes', null);
+  if (!Array.isArray(legacy) || !legacy.length) return;
+  const current = readLocal('wordbook', []);
+  const merged = Array.isArray(current) ? current.map(item => ({ ...item })) : [];
+  legacy.forEach(item => {
+    if (!item || typeof item.en !== 'string') return;
+    const existing = merged.find(row => row.en === item.en);
+    if (existing) {
+      existing.count = Math.max(existing.count || 0, Number(item.count) || 1);
+      existing.lastWrongAt = Math.max(existing.lastWrongAt || 0, Number(item.lastWrongAt) || 0);
+      existing.zh = existing.zh || item.zh || '';
+    } else {
+      merged.push({
+        en: item.en,
+        zh: item.zh || '',
+        count: Number(item.count) || 1,
+        addedAt: Number(item.lastWrongAt) || Date.now(),
+        lastWrongAt: Number(item.lastWrongAt) || 0
+      });
+    }
+  });
+  writeLocal('wordbook', merged);
+  writeLocal('mistakes_legacy_v2', legacy);
+  try { localStorage.removeItem(`${STORAGE_PREFIX}mistakes`); } catch {}
+}
+
+/* ---------- 事件 ---------- */
+
 function bindEvents() {
   $$('.nav-item').forEach(button => button.addEventListener('click', () => switchView(button.dataset.view)));
-  $('#chapterList').addEventListener('click', event => { const button = event.target.closest('[data-chapter]'); if (button) selectChapter(Number(button.dataset.chapter)); });
+  $('#chapterList').addEventListener('click', event => {
+    const button = event.target.closest('[data-chapter]');
+    if (button) { closeSidebar(); switchView('study'); loadStudy(Number(button.dataset.chapter)); }
+  });
+
   $$('.mode-switch button').forEach(button => button.addEventListener('click', () => {
     state.mode = button.dataset.mode;
     localStorage.setItem(`${STORAGE_PREFIX}mode`, state.mode);
     $$('.mode-switch button').forEach(item => item.classList.toggle('active', item === button));
-    renderCard();
+    if (state.rows.length) { renderStack(); scrollToRow(state.current, false); }
   }));
-  $('#flashcard').addEventListener('click', flipCard);
-  $('#flashcard').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); flipCard(); } });
-  $('#bookmarkBtn').addEventListener('click', event => { event.stopPropagation(); toggleBookmark(); });
-  $('#speakBtn').addEventListener('click', event => { event.stopPropagation(); const word = currentWord(); if (word) speak(word.en); });
-  $('#knownBtn').addEventListener('click', () => rateWord(true));
-  $('#unknownBtn').addEventListener('click', () => rateWord(false));
+
+  $('#wordStack').addEventListener('scroll', () => {
+    if (Date.now() < state.programmaticUntil) return;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(syncCurrentFromScroll, 110);
+  }, { passive: true });
+
+  $('#wordStackInner').addEventListener('click', event => {
+    const rowEl = event.target.closest('.word-pair');
+    if (!rowEl) return;
+    const index = Number(rowEl.dataset.index);
+    if (event.target.closest('.pair-bookmark')) { toggleBookmark(index); return; }
+    const pronunciation = event.target.closest('.pronunciation');
+    if (pronunciation) { speak(state.rows[index].en, pronunciation); return; }
+    setCurrent(index);
+    if (event.target.closest('.meaning-card')) revealCurrent();
+  });
+
+  $('#knownBtn').addEventListener('click', () => markCurrent(true));
+  $('#unknownBtn').addEventListener('click', () => markCurrent(false));
+
   $('#resetBtn').addEventListener('click', () => $('#confirmDialog').showModal());
   $('#cancelResetBtn').addEventListener('click', () => $('#confirmDialog').close());
-  $('#confirmResetBtn').addEventListener('click', async () => { $('#confirmDialog').close(); await loadStudy(state.chapter, { fresh: true }); showToast('本章已重新开始'); });
-  $('#restartBtn').addEventListener('click', () => loadStudy(state.chapter, { fresh: true, customWords: state.sessionType === 'chapter' ? null : state.words, type: state.sessionType }));
+  $('#confirmResetBtn').addEventListener('click', () => {
+    $('#confirmDialog').close();
+    loadStudy(state.chapter, { fresh: true });
+    showToast('本章已重新开始');
+  });
+  $('#restartBtn').addEventListener('click', () => {
+    const custom = state.sessionType === 'wordbook' ? [...state.words] : null;
+    loadStudy(state.chapter, { fresh: true, customWords: custom, type: state.sessionType });
+  });
   $('#nextChapterBtn').addEventListener('click', () => loadStudy(state.chapter === state.meta.length ? 1 : state.chapter + 1));
+
   $('#themeBtn').addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
   $('#menuBtn').addEventListener('click', openSidebar);
   $('#collapseSidebarBtn').addEventListener('click', () => setSidebarCollapsed(true));
   $('#expandSidebarBtn').addEventListener('click', () => setSidebarCollapsed(false));
   $('#sidebarBackdrop').addEventListener('click', closeSidebar);
+
   $('#searchInput').addEventListener('focus', () => { $('#searchInput').blur(); openSearch(); });
   $('#searchInput').addEventListener('click', () => openSearch());
   $('#dialogSearchInput').addEventListener('input', event => runSearch(event.target.value).catch(error => { console.error(error); showToast('搜索失败，请重试'); }));
@@ -643,37 +964,54 @@ function bindEvents() {
     const bounds = dialog.getBoundingClientRect();
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
   }));
+
   $('#settingsBtn').addEventListener('click', () => { closeSidebar(); $('#settingsDialog').showModal(); });
   $('#shuffleToggle').addEventListener('click', () => {
     state.shuffle = !state.shuffle;
     localStorage.setItem(`${STORAGE_PREFIX}shuffle`, state.shuffle);
     $('#shuffleToggle').setAttribute('aria-checked', String(state.shuffle));
+    $('#sessionKind').textContent = state.sessionType === 'wordbook' ? '生词复习' : state.shuffle ? '随机学习' : '顺序学习';
     showToast(state.shuffle ? '新学习队列将随机排列' : '新学习队列将按词库顺序排列');
   });
-  $('#testSoundBtn').addEventListener('click', () => speak(currentWord()?.en || 'ambition'));
+  $('#testSoundBtn').addEventListener('click', () => speak(state.rows[state.current]?.en || 'ambition'));
   $('#exportBtn').addEventListener('click', exportData);
   $('#importBtn').addEventListener('click', () => $('#importFile').click());
   $('#importFile').addEventListener('change', event => { if (event.target.files[0]) importData(event.target.files[0]); });
-  $$('.list-tabs button').forEach(button => button.addEventListener('click', () => { state.listType = button.dataset.list; $('#listSearchInput').value = ''; renderWordList(); }));
+
   $('#listSearchInput').addEventListener('input', renderWordList);
   $('#studyWordbookBtn').addEventListener('click', studyCollection);
   $('#restartSpellingBtn').addEventListener('click', startSpelling);
   $('#spellingForm').addEventListener('submit', event => { event.preventDefault(); revealSpelling(); });
   $('#spellingSkipBtn').addEventListener('click', () => revealSpelling(true));
+
   document.addEventListener('keydown', event => {
     const activeTag = document.activeElement?.tagName;
     const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) || document.activeElement?.isContentEditable;
-    const insideCard = !!event.target?.closest?.('#flashcard');
     if (event.key === '/' && !$('dialog[open]') && !typing) { event.preventDefault(); openSearch(); return; }
     if ($('dialog[open]') || typing) return;
     if (event.key === 'Escape') { closeSidebar(); return; }
-    if (state.view !== 'study' || (!insideCard && activeTag === 'BUTTON')) return;
-    if (event.code === 'Space' || event.key === 'ArrowDown') { event.preventDefault(); flipCard(); return; }
-    if (event.key === 'ArrowRight') { event.preventDefault(); rateWord(true); }
-    if (event.key === 'ArrowLeft') { event.preventDefault(); rateWord(false); }
+    if (state.view !== 'study') return;
+    if (activeTag === 'BUTTON' && (event.key === ' ' || event.key === 'Enter')) return;
+    if (event.repeat) return;
+    if (event.key === 'ArrowDown' || event.key === ' ') { event.preventDefault(); revealCurrent(); return; }
+    if (event.key === 'ArrowUp') { event.preventDefault(); setCurrent(state.current - 1, { scroll: true }); return; }
+    if (event.key === 'ArrowRight') { event.preventDefault(); markCurrent(true); return; }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); markCurrent(false); }
   });
+
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
+  window.addEventListener('resize', () => {
+    if (state.view !== 'study') return;
+    syncPairHeight();
+    if (state.rows.length) scrollToRow(state.current, false);
+  });
+  if ('ResizeObserver' in window) {
+    const stack = $('#wordStack');
+    if (stack) new ResizeObserver(() => { syncPairHeight(); }).observe(stack);
+  }
 }
+
+/* ---------- 启动 ---------- */
 
 async function init() {
   const theme = localStorage.getItem(`${STORAGE_PREFIX}theme_v2`);
@@ -683,6 +1021,7 @@ async function init() {
   $('#shuffleToggle').setAttribute('aria-checked', String(state.shuffle));
   if (localStorage.getItem(`${STORAGE_PREFIX}sidebarCollapsed`) === 'true') setSidebarCollapsed(true);
   bindEvents();
+
   try {
     const embedded = window.WORD_MEMORY_DATA;
     if (embedded?.meta) {
@@ -690,29 +1029,29 @@ async function init() {
     } else {
       const response = await fetch('./data/meta.json');
       if (!response.ok) throw new Error('词库目录加载失败');
-      const metadata = await response.json();
-      state.meta = metadata.chapters;
+      state.meta = (await response.json()).chapters;
     }
     $('#chapterTotalLabel').textContent = `${state.meta.length} 章`;
-    renderChapterList();
-    [state.wordbook, state.mistakes, state.schedule] = await Promise.all([Store.loadCollection('wordbook'), Store.loadCollection('mistakes'), Store.loadSchedule()]);
-    state.wordbook = Array.isArray(state.wordbook) ? state.wordbook : [];
-    state.mistakes = Array.isArray(state.mistakes) ? state.mistakes : [];
-    state.schedule = state.schedule && typeof state.schedule === 'object' ? state.schedule : {};
-    renderCollectionCounts();
-    const progressPromises = state.meta.map(async ({ ch }) => {
-      const saved = await Store.loadChapter(ch);
+
+    migrateVocabulary();
+    const storedVocabulary = Store.loadVocabulary();
+    state.vocabulary = Array.isArray(storedVocabulary) ? storedVocabulary : [];
+    const storedSchedule = Store.loadSchedule();
+    state.schedule = storedSchedule && typeof storedSchedule === 'object' ? storedSchedule : {};
+    state.meta.forEach(({ ch }) => {
+      const saved = Store.loadChapter(ch);
       chapterCache.set(`stats_${ch}`, saved?.wordStats || {});
     });
-    await loadStudy(1);
-    await Promise.all(progressPromises);
+    renderCollectionCounts();
     renderChapterList();
+
+    await loadStudy(1);
+    renderChapterList();
+
     const canUseServiceWorker = 'serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:');
     if (canUseServiceWorker) navigator.serviceWorker.register('./sw.js').catch(() => {});
   } catch (error) {
     console.error(error);
-    $('#promptText').textContent = '词库未加载';
-    $('#cardKicker').textContent = 'PLEASE START A LOCAL SERVER';
     showToast('词库加载失败，请确认 data.js 与 index.html 在同一目录');
   }
 }

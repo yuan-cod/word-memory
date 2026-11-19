@@ -37,6 +37,7 @@
     <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3Z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
   </svg>
 
   <div class="app-shell">
@@ -78,27 +79,15 @@
 
           <div class="study-layout">
             <div class="study-column">
-              <div class="session-header"><div><span class="chapter-tag" id="chapterTag">CHAPTER 01</span><span class="session-kind" id="sessionKind">顺序学习</span></div><div class="session-progress"><span id="sessionCount">1 / 39</span><div class="thin-progress"><span id="sessionProgress"></span></div></div></div>
+              <div class="session-header"><div><span class="chapter-tag" id="chapterTag">CHAPTER 01</span><span class="session-kind" id="sessionKind">顺序学习</span></div><div class="session-progress"><span id="sessionCount">0 / 39</span><div class="thin-progress"><span id="sessionProgress"></span></div></div></div>
 
-              <div class="flashcard-scene" id="flashcardScene">
-                <div class="flashcard" id="flashcard" role="button" tabindex="0" aria-label="单词卡片，点击或按空格查看释义">
-                  <div class="card-face card-front">
-                    <div class="card-top"><span class="word-status"><span></span><span id="wordStatus">新单词</span></span><button class="card-icon bookmark-btn" id="bookmarkBtn" aria-label="收藏到生词本" title="收藏到生词本"><svg><use href="#i-bookmark"/></svg></button></div>
-                    <div class="card-center"><span class="card-kicker" id="cardKicker">DO YOU KNOW THIS WORD?</span><h2 id="promptText">ambition</h2><button class="pronunciation" id="speakBtn"><svg><use href="#i-volume"/></svg><span>点击发音</span></button></div>
-                    <div class="card-bottom"><span class="flip-hint"><svg><use href="#i-layers"/></svg>点击卡片，查看释义</span><span class="mastery-dots" id="masteryDots" aria-label="熟练度"><i></i><i></i><i></i></span></div>
-                  </div>
-                  <div class="card-face card-back">
-                    <div class="card-top"><span class="answer-label">WORD MEANING</span><span class="answer-word" id="answerWord"></span></div>
-                    <div class="card-center"><h2 id="answerText"></h2><div class="answer-divider"></div><p id="answerPrompt"></p></div>
-                    <div class="card-bottom"><span class="flip-hint"><svg><use href="#i-layers"/></svg>再点一次，返回正面</span><span class="mastery-dots" id="answerMasteryDots"><i></i><i></i><i></i></span></div>
-                  </div>
-                </div>
+              <div class="word-stack" id="wordStack" aria-label="本章单词列表">
+                <div class="word-stack-inner" id="wordStackInner"></div>
+                <div class="finished-card" id="finishedCard" hidden><span class="finished-icon"><svg><use href="#i-spark"/></svg></span><p class="eyebrow">SESSION COMPLETE</p><h2>这一轮，完成了。</h2><p id="finishedSummary"></p><div><button class="primary-btn" id="restartBtn">再学一轮<svg><use href="#i-refresh"/></svg></button><button class="text-btn" id="nextChapterBtn">下一章<svg><use href="#i-arrow"/></svg></button></div></div>
               </div>
 
-              <div class="recall-actions" id="recallActions"><button class="recall-btn unknown" id="unknownBtn"><span class="recall-icon"><svg><use href="#i-refresh"/></svg></span><span>还不认识<small>稍后再见一次</small></span><kbd>←</kbd></button><button class="recall-btn known" id="knownBtn"><span class="recall-icon"><svg><use href="#i-check"/></svg></span><span>认识了<small>记得很清楚了</small></span><kbd>→</kbd></button></div>
-              <p class="keyboard-hint"><kbd>↓</kbd> 翻转卡片<span>·</span><kbd>←</kbd><kbd>→</kbd> 快速判断</p>
-
-              <div class="finished-card" id="finishedCard" hidden><span class="finished-icon"><svg><use href="#i-spark"/></svg></span><p class="eyebrow">SESSION COMPLETE</p><h2>这一轮，完成了。</h2><p id="finishedSummary"></p><div><button class="primary-btn" id="restartBtn">再学一轮<svg><use href="#i-refresh"/></svg></button><button class="text-btn" id="nextChapterBtn">下一章<svg><use href="#i-arrow"/></svg></button></div></div>
+              <div class="recall-actions" id="recallActions"><button class="recall-btn unknown" id="unknownBtn"><span class="recall-icon"><svg><use href="#i-refresh"/></svg></span><span>还不认识<small>稍后再见一次</small></span><kbd>←</kbd></button><button class="recall-btn known" id="knownBtn"><span class="recall-icon"><svg><use href="#i-check"/></svg></span><span>记住了<small>记得很清楚了</small></span><kbd>→</kbd></button></div>
+              <p class="keyboard-hint"><kbd>↓</kbd> 显示释义<span>·</span><kbd>↑</kbd> 上一个<span>·</span><kbd>←</kbd><kbd>→</kbd> 判断</p>
             </div>
 
             <aside class="progress-panel" aria-label="本章学习进度">
@@ -115,14 +104,14 @@
         </section>
 
         <section class="view" id="wordbookView" aria-labelledby="wordbookTitle">
-          <div class="page-heading"><div><div class="eyebrow"><span></span>YOUR WORD COLLECTION</div><h1 id="wordbookTitle">留住的词，慢慢都会熟悉。</h1><p id="wordbookSubtitle">收藏需要多看一眼的单词。</p></div><button class="secondary-btn" id="studyWordbookBtn">练习生词<svg><use href="#i-arrow"/></svg></button></div>
-          <div class="list-toolbar"><div class="list-tabs" role="tablist"><button class="active" data-list="wordbook">生词本<span id="listSavedCount">0</span></button><button data-list="mistakes">易错词<span id="listMistakeCount">0</span></button></div><label class="list-search"><svg><use href="#i-search"/></svg><input id="listSearchInput" type="search" placeholder="在列表中查找" aria-label="筛选单词列表"></label></div>
+          <div class="page-heading"><div><div class="eyebrow"><span></span>YOUR WORD COLLECTION</div><h1 id="wordbookTitle">留住的词，慢慢都会熟悉。</h1><p id="wordbookSubtitle">收藏和不熟的词，都留在这一份名单里。</p></div><button class="secondary-btn" id="studyWordbookBtn">练习生词<svg><use href="#i-arrow"/></svg></button></div>
+          <div class="list-toolbar"><div class="list-tabs" role="tablist"><button class="active" data-list="wordbook">生词本<span id="listTotalCount">0</span></button></div><label class="list-search"><svg><use href="#i-search"/></svg><input id="listSearchInput" type="search" placeholder="在列表中查找" aria-label="筛选单词列表"></label></div>
           <div class="word-list" id="wordList"></div>
         </section>
 
         <section class="view" id="spellingView" aria-labelledby="spellingTitle">
           <div class="page-heading"><div><div class="eyebrow"><span></span>RECALL, DON'T RECOGNIZE</div><h1 id="spellingTitle">不看答案，把它写出来。</h1><p id="spellingSubtitle">Chapter 01 · 根据中文释义拼写英文单词</p></div><button class="secondary-btn" id="restartSpellingBtn"><svg><use href="#i-refresh"/></svg>换一组</button></div>
-          <div class="spelling-layout"><div class="spelling-card" id="spellingCard"><div class="spelling-top"><span id="spellingCount">01 / 39</span><span id="spellingScore">0 个正确</span></div><div class="spelling-body"><span class="spelling-label">根据释义，写出单词</span><h2 id="spellingHint"></h2><form id="spellingForm"><input id="spellingInput" class="spelling-input" placeholder="type the word..." autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="输入英文拼写"><button class="primary-btn" id="spellingSubmit" type="submit">确认拼写<svg><use href="#i-arrow"/></svg></button></form><div class="spelling-feedback" id="spellingFeedback" aria-live="polite"></div></div><div class="spelling-bottom"><button class="text-btn" id="spellingSkipBtn">看看答案</button><span><kbd>Enter</kbd> 确认 / 下一词</span></div></div><aside class="spelling-aside"><span class="aside-icon"><svg><use href="#i-spell"/></svg></span><h3>主动回忆，比重复眼熟更有效。</h3><p>拼错不会扣分，只会被放进易错词，方便你之后再看一眼。</p><div><span>本次正确率</span><strong id="spellingAccuracy">—</strong></div></aside></div>
+          <div class="spelling-layout"><div class="spelling-card" id="spellingCard"><div class="spelling-top"><span id="spellingCount">01 / 39</span><span id="spellingScore">0 个正确</span></div><div class="spelling-body"><span class="spelling-label">根据释义，写出单词</span><h2 id="spellingHint"></h2><form id="spellingForm"><input id="spellingInput" class="spelling-input" placeholder="type the word..." autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="输入英文拼写"><button class="primary-btn" id="spellingSubmit" type="submit">确认拼写<svg><use href="#i-arrow"/></svg></button></form><div class="spelling-feedback" id="spellingFeedback" aria-live="polite"></div></div><div class="spelling-bottom"><button class="text-btn" id="spellingSkipBtn">看看答案</button><span><kbd>Enter</kbd> 确认 / 下一词</span></div></div><aside class="spelling-aside"><span class="aside-icon"><svg><use href="#i-spell"/></svg></span><h3>主动回忆，比重复眼熟更有效。</h3><p>拼错不会扣分，只会被放进生词本，方便你之后再看一眼。</p><div><span>本次正确率</span><strong id="spellingAccuracy">—</strong></div></aside></div>
         </section>
       </main>
       <footer class="app-footer"><span>WORDS, ONE AT A TIME.</span><span>离线可用 · 自动保存</span></footer>
@@ -134,7 +123,7 @@
   <dialog class="app-dialog settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-header"><div><span class="eyebrow">PREFERENCES</span><h2 id="settingsTitle">偏好与数据</h2></div><button class="icon-btn" data-close="settingsDialog" aria-label="关闭设置"><svg><use href="#i-close"/></svg></button></div><div class="settings-content"><div class="setting-row"><div><strong>学习顺序</strong><p>随机让回忆少一点位置依赖。</p></div><button class="toggle" id="shuffleToggle" role="switch" aria-checked="false" aria-label="随机学习"><span></span></button></div><div class="setting-row"><div><strong>单词发音</strong><p>点击卡片上的扬声器朗读英文。</p></div><button class="secondary-btn" id="testSoundBtn"><svg><use href="#i-volume"/></svg>试听</button></div><div class="data-actions"><h3>学习数据</h3><p>学习记录仅保留在本机。换设备前，记得导出备份。</p><button class="secondary-btn" id="exportBtn"><svg><use href="#i-download"/></svg>导出学习备份</button><button class="secondary-btn" id="importBtn"><svg><use href="#i-upload"/></svg>导入学习备份</button></div></div></dialog>
   <input id="importFile" type="file" accept="application/json,.json" hidden>
 
-  <dialog class="app-dialog confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle"><span class="confirm-icon"><svg><use href="#i-refresh"/></svg></span><h2 id="confirmTitle">重新开始本章？</h2><p>本章的学习进度与本轮记录会被清空，生词本和易错词会保留。</p><div><button class="secondary-btn" id="cancelResetBtn">取消</button><button class="primary-btn" id="confirmResetBtn">重新开始</button></div></dialog>
+  <dialog class="app-dialog confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle"><span class="confirm-icon"><svg><use href="#i-refresh"/></svg></span><h2 id="confirmTitle">重新开始本章？</h2><p>本章的学习进度与本轮记录会被清空，生词本会保留。</p><div><button class="secondary-btn" id="cancelResetBtn">取消</button><button class="primary-btn" id="confirmResetBtn">重新开始</button></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"><svg><use href="#i-check"/></svg><span></span></div>
   <script src="./data.js"></script>
   <script src="./app.js"></script>

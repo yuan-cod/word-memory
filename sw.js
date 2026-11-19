@@ -1,6 +1,7 @@
 // 考研单词记忆 - Service Worker
-const CACHE = 'wordmemory-v4';
-const FILES = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png', './data/meta.json'];
+// 网络优先：改了样式/逻辑推上去就能立刻看到；断网时回落到缓存，PWA 仍可离线用。
+const CACHE = 'wordmemory-v6';
+const FILES = ['./index.html', './styles.css', './app.js', './data.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -23,15 +24,20 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  const request = e.request;
+  if (request.method !== 'GET') return;
+  if (new URL(request.url).origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(e.request).then(cached =>
-      cached || fetch(e.request).then(resp => {
-        if (resp.ok) {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return resp;
-      })
-    )
+    caches.open(CACHE).then(async cache => {
+      try {
+        const response = await fetch(request);
+        if (response && response.ok) cache.put(request, response.clone());
+        return response;
+      } catch (error) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        return new Response('', { status: 504, statusText: 'Offline' });
+      }
+    })
   );
 });
